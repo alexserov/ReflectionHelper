@@ -198,17 +198,17 @@ namespace DevExpress.Xpf.Core.Internal {
         }                
 
         internal static object CreateMethodHandlerImpl(MethodInfo mi, Type instanceType, Type delegateType,
-            bool callVirtIfNeeded) {
+            bool callVirtIfNeeded, bool? useTuple2 = null) {
             bool isStatic = mi.IsStatic;
 
             var thisArgType = instanceType ?? mi.DeclaringType;
             var returnType = mi.ReturnType;
-
+            bool useTuple = false;
             Type[] delegateGenericArguments;
             bool skipArgumentLengthCheck = false;
             var sourceParametersTypes = mi.GetParameters().Select(x => x.ParameterType).ToArray();
             if (delegateType == null) {
-                delegateType = MakeGenericDelegate(sourceParametersTypes, ref returnType, isStatic ? null : thisArgType);
+                delegateType = MakeGenericDelegate(sourceParametersTypes, ref returnType, isStatic ? null : thisArgType, out useTuple);
                 delegateGenericArguments = sourceParametersTypes;
                 skipArgumentLengthCheck = true;
             }
@@ -219,7 +219,7 @@ namespace DevExpress.Xpf.Core.Internal {
                     thisArgType = delegateGenericArguments[0];
                 returnType = invokeMethod.ReturnType;
             }
-
+            useTuple = useTuple2 ?? useTuple;
             if (!skipArgumentLengthCheck &&
                 delegateGenericArguments.Length !=
                 (isStatic ? sourceParametersTypes.Count() : sourceParametersTypes.Count() + 1))
@@ -235,37 +235,78 @@ namespace DevExpress.Xpf.Core.Internal {
             else
                 dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, true);
 
-            var ig = dm.GetILGenerator();            
+            var ig = dm.GetILGenerator();
 
+            byte newLocalIndex = 0;
+            if (!isStatic) {
+                ig.DeclareLocal(mi.DeclaringType);
+                newLocalIndex = 1;
+            }
+            foreach (var type in mi.GetParameters().Select(x => x.ParameterType)) {
+                ig.DeclareLocal(GetElementTypeIfNeeded(type));
+            }
             if (!isStatic) {
                 var isValueType = mi.DeclaringType.IsValueType;
-                if (isValueType) {
-                    ig.DeclareLocal(mi.DeclaringType);
-                }
                 ig.Emit(OpCodes.Ldarg_0);
-                CastClass(ig, thisArgType, mi.DeclaringType);
-
+                CastClass(ig, thisArgType, mi.DeclaringType);                         
                 if (isValueType) {
                     ig.Emit(OpCodes.Stloc_0);
                     ig.Emit(OpCodes.Ldloca_S, 0);
                 }
-            }            
+            }
 
-            short argumentIndex = mi.IsStatic ? (short) 0 : (short) 1;
+            short argumentIndex = mi.IsStatic ? (short)0 : (short)1;
+
             for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
-                ig.Emit(OpCodes.Ldarg, argumentIndex++);
-                CastClass(ig, resultParametersTypes.ElementAt(parameterIndex), sourceParametersTypes[parameterIndex]);
+                ig.Emit(OpCodes.Ldarg, argumentIndex);
+                CastClass(ig, GetElementTypeIfNeeded(resultParametersTypes.ElementAt(parameterIndex)),
+                    GetElementTypeIfNeeded(sourceParametersTypes[parameterIndex]));                
+                var parameter = mi.GetParameters()[argumentIndex - newLocalIndex];
+                if (!parameter.IsOut) {
+                    ig.Emit(OpCodes.Stloc, argumentIndex);
+                    if (!parameter.ParameterType.IsByRef)
+                        ig.Emit(OpCodes.Ldloc, argumentIndex);
+                    else
+                        ig.Emit(OpCodes.Ldloca_S, argumentIndex);
+                } else {
+                    ig.Emit(OpCodes.Ldloca, argumentIndex);
+                }                
+                argumentIndex++;
             }
             if (mi.IsVirtual && callVirtIfNeeded)
                 ig.Emit(OpCodes.Callvirt, mi);
             else
                 ig.Emit(OpCodes.Call, mi);
 
-            CastClass(ig, mi.ReturnType, returnType);
+            //building tuple            
+            if (useTuple) {
+                //if (mi.ReturnType != typeof(void)) {
+                //    CastClass(ig, mi.ReturnType, returnType.GetGenericArguments()[0]);
+                //}
+                //for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
+                //    if (sourceParametersTypes[parameterIndex].IsByRef) {
+                //        ig.Emit(OpCodes.Ldloc, newLocalIndex + parameterIndex);
+                //        CastClass(ig, sourceParametersTypes[parameterIndex].GetElementType(),
+                //            resultParametersTypes.ElementAt(parameterIndex));
+                //    }
+                //}
+                //ig.Emit(OpCodes.Newobj, returnType.GetConstructors().First(x => x.GetParameters().Length > 0));
+                ig.Emit(OpCodes.Ldnull);
+            }
+            else {
+                CastClass(ig, mi.ReturnType, returnType);
+            }
             ig.Emit(OpCodes.Ret);
             return dm.CreateDelegate(delegateType);
-        }        
-        internal static Type MakeGenericDelegate(Type[] parameterTypes, ref Type returnType, Type thisArgType) {
+        }
+
+        static Type GetElementTypeIfNeeded(Type x) {
+            if (x.IsByRef)
+                return x.GetElementType();
+            return x;
+        }
+        internal static Type MakeGenericDelegate(Type[] parameterTypes, ref Type returnType, Type thisArgType, out bool useTuple) {
+            useTuple = false;
             Type resultType = null;
             bool hasReturnType = returnType != null && returnType != typeof(void);
             var parametersCount = parameterTypes.Length;
@@ -293,8 +334,10 @@ namespace DevExpress.Xpf.Core.Internal {
                 if (hasReturnType)
                     tupleArgs.Insert(0, returnType);
                 returnType =
-                    typeof(Tuple<>).Assembly.GetType(string.Format("System.Action`{0}", tupleArgs.Count))
+                    typeof(Tuple<>).Assembly.GetType(string.Format("System.Tuple`{0}", tupleArgs.Count))
                         .MakeGenericType(tupleArgs.ToArray());
+                lst.Add(returnType);
+                useTuple = true;
             }
             hasReturnType = hasReturnType || hasByRefArgs;
             switch (parametersCount) {
@@ -471,17 +514,17 @@ namespace DevExpress.Xpf.Core.Internal {
             cache = new Dictionary<MethodInfo, Delegate>();
         }
 
-        public Delegate GetDelegate(MethodInfo info, Type instanceType, Type delegateType) {
+        public Delegate GetDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTuple) {
             Delegate result;
             if (!cache.TryGetValue(info, out result)) {
-                result = CreateDelegate(info, instanceType, delegateType);
+                result = CreateDelegate(info, instanceType, delegateType, useTuple);
                 cache[info] = result;
             }
             return result;
         }
 
-        Delegate CreateDelegate(MethodInfo info, Type instanceType, Type delegateType) {
-            return (Delegate) ReflectionHelper.CreateMethodHandlerImpl(info, instanceType, delegateType, true);
+        Delegate CreateDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTuple) {
+            return (Delegate) ReflectionHelper.CreateMethodHandlerImpl(info, instanceType, delegateType, true, useTuple);
         }
     }
 
@@ -646,8 +689,9 @@ namespace DevExpress.Xpf.Core.Internal {
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
             var returnType = wrapperMethodInfo.ReturnType;
+            bool useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
-                typeof(object));
+                typeof(object), out useTuple);
             var createsTuple = wrapperMethodInfo.ReturnType != returnType;
             if (createsTuple)
                 ilGenerator.DeclareLocal(returnType);
@@ -656,6 +700,10 @@ namespace DevExpress.Xpf.Core.Internal {
             ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
             ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
             ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
+            if (useTuple)
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+            else
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
             ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.GetDelegateMethodInfo, null);
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             ilGenerator.Emit(OpCodes.Ldarg_0);
@@ -677,12 +725,17 @@ namespace DevExpress.Xpf.Core.Internal {
             ILGenerator ilGenerator) {
             int index = skipFirst ? 1 : 0;
             ilGenerator.Emit(OpCodes.Stloc_0);
-            ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, 0), Type.EmptyTypes);
-            foreach (var tuple in tuples) {
-                ilGenerator.Emit(OpCodes.Ldarg, (byte) tuple.Item1);
+            if (skipFirst) {                
                 ilGenerator.Emit(OpCodes.Ldloc_0);
-                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, index), Type.EmptyTypes);
+                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, 0), null);
+            }            
+            var tpls = tuples.ToArray();
+            for(int i = 0; i<tpls.Length; i++) {
+                var tuple = tpls[i];
+                var value = (byte) tuple.Item1 + 1;
+                ilGenerator.Emit(OpCodes.Ldarg, value);
+                ilGenerator.Emit(OpCodes.Ldloc_0);
+                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, index), null);
                 if (tuple.Item2.IsClass)
                     ilGenerator.Emit(OpCodes.Stind_Ref);
                 else

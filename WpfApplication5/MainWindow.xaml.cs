@@ -34,16 +34,17 @@ namespace WpfApplication5 {
 
             //isc.Method1(isc.Name);
             //isc.Name = "baby";
-            //isc.Method1(isc.Name);
+            object baby = "baby";
+            isc.Method1(ref baby);
             int name = 0;
-            isc.Method2(ref name);
+            //isc.Method2(ref name);
         }
     }
 
     public class SomeClass {
         //string Name { get; set; }
         string Name2 { get; set; }
-        public void Method1(string name) {
+        public void Method1(ref object name) {
             MessageBox.Show($"Hello {name}!");
         }
 
@@ -55,7 +56,7 @@ namespace WpfApplication5 {
     public interface ISomeClass {
         //[ReflectionHelperAttributes.FieldAccessor]
         //string Name { get; set; }
-        //void Method1(object name);
-        void Method2(ref int name);
+        void Method1(ref object name);
+        //void Method2(ref int name);
     }
 }
