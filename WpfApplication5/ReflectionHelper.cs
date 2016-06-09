@@ -269,21 +269,21 @@ namespace DevExpress.Xpf.Core.Internal {
             short argumentIndex = mi.IsStatic ? (short) 0 : (short) 1;
 
             for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
-                ig.Emit(OpCodes.Ldarg, argumentIndex);
-                CastClass(ig, GetElementTypeIfNeeded(resultParametersTypes.ElementAt(parameterIndex)),
-                    GetElementTypeIfNeeded(sourceParametersTypes[parameterIndex]));
                 var parameter = mi.GetParameters()[argumentIndex - newLocalIndex];
                 if (!parameter.IsOut) {
+                    ig.Emit(OpCodes.Ldarg, argumentIndex);
+                    CastClass(ig, GetElementTypeIfNeeded(resultParametersTypes.ElementAt(parameterIndex)),
+                        GetElementTypeIfNeeded(sourceParametersTypes[parameterIndex]));
                     ig.Emit(OpCodes.Stloc, localBuilders[argumentIndex]);
                     ////TODO
                     //ig.EmitWriteLine(localBuilders[argumentIndex]);
                     if (!parameter.ParameterType.IsByRef)
-                        ig.Emit(OpCodes.Ldloc, argumentIndex);
+                        ig.Emit(OpCodes.Ldloc, localBuilders[argumentIndex]);
                     else
-                        ig.Emit(OpCodes.Ldloca, (UInt16) argumentIndex);
+                        ig.Emit(OpCodes.Ldloca, localBuilders[argumentIndex]);
                 }
                 else {
-                    ig.Emit(OpCodes.Ldloca, (UInt16) argumentIndex);
+                    ig.Emit(OpCodes.Ldloca, localBuilders[argumentIndex]);
                 }
                 argumentIndex++;
             }
