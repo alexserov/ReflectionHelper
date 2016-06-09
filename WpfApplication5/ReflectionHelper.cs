@@ -275,8 +275,8 @@ namespace DevExpress.Xpf.Core.Internal {
                 var parameter = mi.GetParameters()[argumentIndex - newLocalIndex];
                 if (!parameter.IsOut) {
                     ig.Emit(OpCodes.Stloc, localBuilders[argumentIndex]);
-                    //TODO
-                    ig.EmitWriteLine(localBuilders[argumentIndex]);
+                    ////TODO
+                    //ig.EmitWriteLine(localBuilders[argumentIndex]);
                     if (!parameter.ParameterType.IsByRef)
                         ig.Emit(OpCodes.Ldloc, argumentIndex);
                     else
@@ -644,6 +644,11 @@ namespace DevExpress.Xpf.Core.Internal {
             return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MemberExpression).Member,
                 this);
         }
+        public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMember(
+            Expression<Action<TWrapper>> expression) {
+            return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MethodCallExpression).Method,
+                this);
+        }
 
         enum MemberInfoKind {
             Method,
@@ -699,17 +704,27 @@ namespace DevExpress.Xpf.Core.Internal {
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method) {
-            var fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, typeof(Delegate),
-                FieldAttributes.Family);
-            ctorInfos.Add(fieldInfo);
             var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo, setting, method),
-                setting.GetBindingFlags());
-            ctorArgs.Add(sourceMethodInfo);
+            setting.GetBindingFlags());
+            FieldBuilder fieldInfo = null;
+            if (sourceMethodInfo != null) {
+                fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, typeof(Delegate),
+                    FieldAttributes.Family);
+                ctorInfos.Add(fieldInfo);
+                ctorArgs.Add(sourceMethodInfo);
+            }
+
             var parameterTypes = wrapperMethodInfo.GetParameters().Select(x => x.ParameterType).ToArray();
             var methodBuilder = typeBuilder.DefineMethod(wrapperMethodInfo.Name,
                 MethodAttributes.Public | MethodAttributes.Virtual, wrapperMethodInfo.ReturnType,
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
+            if (sourceMethodInfo == null) {
+                //TODO non-found method exception
+                ilGenerator.Emit(OpCodes.Ret);
+                typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+                return;
+            }
             var returnType = wrapperMethodInfo.ReturnType;
             bool useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
@@ -734,8 +749,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
                 var paramType = parameterTypes[i];
                 if (paramType.IsByRef) {
-                    if (paramType.IsClass)
-                        ilGenerator.Emit(OpCodes.Ldind_Ref);
+                    LSTind(ilGenerator, paramType.GetElementType(), false);
                 }
             }
             ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
@@ -763,11 +777,56 @@ namespace DevExpress.Xpf.Core.Internal {
                 ilGenerator.Emit(OpCodes.Ldarg, value);
                 ilGenerator.Emit(OpCodes.Ldloc_0);
                 ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, index), null);
-                if (tuple.Item2.IsClass)
-                    ilGenerator.Emit(OpCodes.Stind_Ref);
-                else
-                    throw new NotImplementedException();
+                LSTind(ilGenerator, tuple.Item2.GetElementType(), true);                
             }
+        }
+
+        internal static void LSTind(ILGenerator generator, Type type, bool stind) {
+            OpCode opCode = OpCodes.Stind_Ref;
+
+            switch (Type.GetTypeCode(type)) {
+                case TypeCode.Boolean:
+                    opCode = stind ? OpCodes.Stind_I1 : OpCodes.Ldind_U1;
+                    break;
+                case TypeCode.SByte:
+                case TypeCode.Byte:
+                    opCode = stind ? OpCodes.Stind_I1 : OpCodes.Ldind_I1;
+                    break;
+                case TypeCode.Char:
+                    opCode = stind ? OpCodes.Stind_I2 : OpCodes.Ldind_U2;
+                    break;
+                case TypeCode.Int16:
+                case TypeCode.UInt16:
+                    opCode = stind ? OpCodes.Stind_I2 : OpCodes.Ldind_I2;
+                    break;
+                case TypeCode.Int32:
+                case TypeCode.UInt32:
+                    opCode = stind ? OpCodes.Stind_I4 : OpCodes.Ldind_I4;
+                    break;
+                case TypeCode.Int64:
+                    opCode = stind ? OpCodes.Stind_I8 : OpCodes.Ldind_I8;
+                    break;
+                case TypeCode.UInt64:                    
+                    opCode = stind ? OpCodes.Stind_I8 : OpCodes.Ldind_I8;
+                    break;
+                case TypeCode.Single:
+                    opCode = stind ? OpCodes.Stind_R4 : OpCodes.Ldind_R4;
+                    break;
+                case TypeCode.Double:
+                    opCode = stind ? OpCodes.Stind_R8 : OpCodes.Ldind_R8;
+                    break;
+                default:
+                    if (type.IsClass) {
+                        if (!stind)
+                            opCode = OpCodes.Ldind_Ref;
+                    }
+                    else {
+                        generator.Emit(stind ? OpCodes.Stobj : OpCodes.Ldobj, type);
+                        return;
+                    }
+                    break;
+            }
+            generator.Emit(opCode);
         }
 
         static MethodInfo GetTupleItem(Type type, int i) {
@@ -810,8 +869,7 @@ namespace DevExpress.Xpf.Core.Internal {
 
         static ReflectionGenerator() {
             AssemblyName asmName = new AssemblyName(typesAssemblyName);
-            assemblyBuilder = Thread.GetDomain()
-                .DefineDynamicAssembly(asmName, AssemblyBuilderAccess.RunAndSave);
+            assemblyBuilder = Thread.GetDomain().DefineDynamicAssembly(asmName, AssemblyBuilderAccess.RunAndSave);
             moduleBuilder = assemblyBuilder.DefineDynamicModule(typesModuleName, typesAssemblyName + ".dll");
         }
 
