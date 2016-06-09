@@ -37,6 +37,7 @@ namespace WpfApplication5 {
             object baby = "baby";
             isc.Method1(ref baby);
             int name = 0;
+            MessageBox.Show((string)baby);
             //isc.Method2(ref name);
         }
     }
@@ -44,8 +45,9 @@ namespace WpfApplication5 {
     public class SomeClass {
         //string Name { get; set; }
         string Name2 { get; set; }
-        public void Method1(ref object name) {
+        public void Method1(ref string name) {
             MessageBox.Show($"Hello {name}!");
+            name = "dude";
         }
 
         public void Method2(ref int name) {
