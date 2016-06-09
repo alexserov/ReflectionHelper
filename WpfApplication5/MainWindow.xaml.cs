@@ -21,6 +21,7 @@ namespace WpfApplication5 {
     /// </summary>
     public partial class MainWindow : Window {
         public MainWindow() {
+            new RefAndReturnTests().StringStringVisibility();
             InitializeComponent();
             var sc = new SomeClass() {};
 

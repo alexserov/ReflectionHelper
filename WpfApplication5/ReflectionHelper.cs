@@ -299,7 +299,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 }
                 for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
                     if (sourceParametersTypes[parameterIndex].IsByRef) {
-                        ig.Emit(OpCodes.Ldloc, newLocalIndex + parameterIndex);
+                        ig.Emit(OpCodes.Ldloc, localBuilders[newLocalIndex + parameterIndex]);
                         CastClass(ig, sourceParametersTypes[parameterIndex].GetElementType(),
                             resultParametersTypes.ElementAt(parameterIndex));
                     }
@@ -644,6 +644,7 @@ namespace DevExpress.Xpf.Core.Internal {
             return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MemberExpression).Member,
                 this);
         }
+
         public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMember(
             Expression<Action<TWrapper>> expression) {
             return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MethodCallExpression).Method,
@@ -705,7 +706,7 @@ namespace DevExpress.Xpf.Core.Internal {
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method) {
             var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo, setting, method),
-            setting.GetBindingFlags());
+                setting.GetBindingFlags());
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, typeof(Delegate),
@@ -776,8 +777,8 @@ namespace DevExpress.Xpf.Core.Internal {
                 var value = (byte) tuple.Item1 + 1;
                 ilGenerator.Emit(OpCodes.Ldarg, value);
                 ilGenerator.Emit(OpCodes.Ldloc_0);
-                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, index), null);
-                LSTind(ilGenerator, tuple.Item2.GetElementType(), true);                
+                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, i + index), null);
+                LSTind(ilGenerator, tuple.Item2.GetElementType(), true);
             }
         }
 
@@ -806,7 +807,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 case TypeCode.Int64:
                     opCode = stind ? OpCodes.Stind_I8 : OpCodes.Ldind_I8;
                     break;
-                case TypeCode.UInt64:                    
+                case TypeCode.UInt64:
                     opCode = stind ? OpCodes.Stind_I8 : OpCodes.Ldind_I8;
                     break;
                 case TypeCode.Single:
