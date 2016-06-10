@@ -137,20 +137,26 @@ namespace DevExpress.Xpf.Core.Internal {
             var returnType = wrapperMethodInfo.ReturnType;
             bool useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
-                typeof(object), out useTuple);            
+                isStatic ? null : typeof(object), out useTuple);            
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);            
             ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
             ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
             ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
+            if (isStatic)
+                ilGenerator.Emit(OpCodes.Ldc_I4_1);
+            else
+                ilGenerator.Emit(OpCodes.Ldc_I4_0);
             ilGenerator.EmitCall(OpCodes.Call,
                 method == MemberInfoKind.PropertyGetter
                     ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
                     : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
+            if (!isStatic) {
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
+            }            
             for (byte i = 0; i < parameterTypes.Length; i++) {
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);                
             }

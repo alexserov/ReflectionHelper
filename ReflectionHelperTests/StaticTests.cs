@@ -37,14 +37,14 @@ namespace ReflectionHelperTests {
         public void Simple() {
             var ti = ReflectionGenerator.DefineWrapper<StaticFulentAPITestObject, IFluentAPITestObject>()
                 .DefineProperty(x => x.PrivateStringProperty)
-                    .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .BindingFlags(BindingFlags.NonPublic)
                     .EndMember()
                 .DefineProperty(x => x.stringField)
-                    .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .BindingFlags(BindingFlags.NonPublic)
                     .FieldAccessor()
                     .EndMember()
                 .DefineMethod(x => x.PrivateMethod(null))
-                    .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .BindingFlags(BindingFlags.NonPublic|BindingFlags.Public)
                     .EndMember()
                 .Create();
             Assert.AreEqual("hello", ti.PublicMethod("hello"));

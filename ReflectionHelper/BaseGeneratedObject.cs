@@ -14,8 +14,8 @@ namespace DevExpress.Xpf.Core.Internal {
         static ReflectionGeneratedObject() {
             GetDelegateMethodInfo = GetMethodInfo(x => x.GetDelegate(null, null, null, false));
             GetGenericDelegateMethodInfo = GetMethodInfo(x => x.GetGenericDelegate(null, null, null, false, null));
-            GetFieldGetterMethodInfo = GetMethodInfo(x => x.GetFieldGetter(null, null, null, null));
-            GetFieldSetterMethodInfo = GetMethodInfo(x => x.GetFieldSetter(null, null, null, null));
+            GetFieldGetterMethodInfo = GetMethodInfo(x => x.GetFieldGetter(null, null, null, null, false));
+            GetFieldSetterMethodInfo = GetMethodInfo(x => x.GetFieldSetter(null, null, null, null, false));
         }
 
         static MethodInfo GetMethodInfo(Expression<Action<ReflectionGeneratedObject>> expr) {
@@ -25,13 +25,13 @@ namespace DevExpress.Xpf.Core.Internal {
             cache = new Dictionary<MethodInfo, Delegate>();
         }
 
-        public Delegate GetFieldGetter(FieldInfo info, Type delegateType, Type tElement, Type tField) {
+        public Delegate GetFieldGetter(FieldInfo info, Type delegateType, Type tElement, Type tField, bool addThisArgForStatic) {
             return ReflectionHelper.CreateFieldGetterOrSetter(true,
-                delegateType, info, tElement, tField);
+                delegateType, info, tElement, tField, !addThisArgForStatic);
         }
-        public Delegate GetFieldSetter(FieldInfo info, Type delegateType, Type tElement, Type tField) {
+        public Delegate GetFieldSetter(FieldInfo info, Type delegateType, Type tElement, Type tField, bool addThisArgForStatic) {
             return ReflectionHelper.CreateFieldGetterOrSetter(false,
-                delegateType, info, tElement, tField);
+                delegateType, info, tElement, tField, !addThisArgForStatic);
         }
         public Delegate GetGenericDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTyple,
             Type[] paramTypes) {
