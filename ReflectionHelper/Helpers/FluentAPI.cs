@@ -31,7 +31,7 @@ namespace DevExpress.Xpf.Core.Internal {
             return instance;
         }
         public static ReflectionGeneratorMemberInfoInstance<TWrapper> Fallback<TWrapper>(
-            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Action fallbackAction) {
+            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
             instance.root.WriteSetting(instance.info, x => x.FallbackAction = fallbackAction);
             return instance;
         }
@@ -57,7 +57,7 @@ namespace DevExpress.Xpf.Core.Internal {
                     ReflectionGeneratorMemberInfoInstanceExtensions.Name(instance, name);
         }
         public static ReflectionGeneratorMemberInfoInstance<TWrapper> Fallback<TWrapper>(
-            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Action fallbackAction) {
+            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
             return
                 (ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>)
                     ReflectionGeneratorMemberInfoInstanceExtensions.Fallback(instance, fallbackAction);
@@ -66,6 +66,16 @@ namespace DevExpress.Xpf.Core.Internal {
         public static ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> FieldAccessor<TWrapper>(
             this ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> instance) {
             instance.root.WriteSetting(instance.info, x => x.IsField = true);
+            return instance;
+        }
+        public static ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> GetterFallback<TWrapper>(
+            this ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
+            instance.root.WriteSetting(instance.info, x => x.GetterFallbackAction = fallbackAction);
+            return instance;
+        }
+        public static ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> SetterFallback<TWrapper>(
+            this ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
+            instance.root.WriteSetting(instance.info, x => x.SetterFallbackAction = fallbackAction);
             return instance;
         }
     }

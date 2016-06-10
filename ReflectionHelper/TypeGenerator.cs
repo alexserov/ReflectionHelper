@@ -7,6 +7,11 @@ using System.Reflection.Emit;
 using System.Threading;
 
 namespace DevExpress.Xpf.Core.Internal {
+    internal enum MemberInfoKind {
+        Method,
+        PropertyGetter,
+        PropertySetter
+    }
     public class BaseReflectionGeneratorInstance {
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
     }
@@ -127,28 +132,30 @@ namespace DevExpress.Xpf.Core.Internal {
                 MethodAttributes.Public | MethodAttributes.Virtual, wrapperMethodInfo.ReturnType,
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
-            if (sourceFieldInfo == null) {
-                DoFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, methodBuilder);
-                return;
-            }
             var returnType = wrapperMethodInfo.ReturnType;
             var useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
                 isStatic ? null : typeof(object), out useTuple);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
-            ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
-            ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
-            if (isStatic)
-                ilGenerator.Emit(OpCodes.Ldc_I4_1);
-            else
-                ilGenerator.Emit(OpCodes.Ldc_I4_0);
-            ilGenerator.EmitCall(OpCodes.Call,
-                method == MemberInfoKind.PropertyGetter
-                    ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
-                    : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
+            var fallbackMode = sourceFieldInfo == null;
+            if (fallbackMode) {
+                PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
+            }
+            else {
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
+                ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
+                ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+                ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
+                if (isStatic)
+                    ilGenerator.Emit(OpCodes.Ldc_I4_1);
+                else
+                    ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.EmitCall(OpCodes.Call,
+                    method == MemberInfoKind.PropertyGetter
+                        ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
+                        : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
+            }
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             if (!isStatic) {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
@@ -187,10 +194,6 @@ namespace DevExpress.Xpf.Core.Internal {
                 genericParameterBuilders =
                     methodBuilder.DefineGenericParameters(genericParameters.Select(x => x.Name).ToArray());
             var ilGenerator = methodBuilder.GetILGenerator();
-            if (sourceMethodInfo == null) {
-                DoFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, methodBuilder);
-                return;
-            }
             var returnType = wrapperMethodInfo.ReturnType;
             var useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
@@ -198,28 +201,34 @@ namespace DevExpress.Xpf.Core.Internal {
             var createsTuple = wrapperMethodInfo.ReturnType != returnType;
             if (createsTuple)
                 ilGenerator.DeclareLocal(returnType);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
-            ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
-            if (useTuple)
-                ilGenerator.Emit(OpCodes.Ldc_I4_1);
-            else
-                ilGenerator.Emit(OpCodes.Ldc_I4_0);
-            var methodInfo = ReflectionGeneratedObject.GetDelegateMethodInfo;
-            if (genericParameters.Length > 0) {
-                ilGenerator.Emit(OpCodes.Ldc_I4, genericParameters.Length);
-                ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
-                for (var i = 0; i < genericParameters.Length; i++) {
-                    ilGenerator.Emit(OpCodes.Dup);
-                    ilGenerator.Emit(OpCodes.Ldc_I4, i);
-                    ilGenerator.Emit(OpCodes.Ldtoken, genericParameterBuilders[i]);
-                    ilGenerator.Emit(OpCodes.Stelem_Ref);
-                }
-                methodInfo = ReflectionGeneratedObject.GetGenericDelegateMethodInfo;
+            var fallbackMode = sourceMethodInfo == null;
+            if (fallbackMode) {
+                PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
             }
-            ilGenerator.EmitCall(OpCodes.Call, methodInfo, null);
+            else {
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
+                ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
+                ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
+                if (useTuple)
+                    ilGenerator.Emit(OpCodes.Ldc_I4_1);
+                else
+                    ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                var methodInfo = ReflectionGeneratedObject.GetDelegateMethodInfo;
+                if (genericParameters.Length > 0) {
+                    ilGenerator.Emit(OpCodes.Ldc_I4, genericParameters.Length);
+                    ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
+                    for (var i = 0; i < genericParameters.Length; i++) {
+                        ilGenerator.Emit(OpCodes.Dup);
+                        ilGenerator.Emit(OpCodes.Ldc_I4, i);
+                        ilGenerator.Emit(OpCodes.Ldtoken, genericParameterBuilders[i]);
+                        ilGenerator.Emit(OpCodes.Stelem_Ref);
+                    }
+                    methodInfo = ReflectionGeneratedObject.GetGenericDelegateMethodInfo;
+                }
+                ilGenerator.EmitCall(OpCodes.Call, methodInfo, null);
+            }
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             if (!isStatic) {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
@@ -233,6 +242,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 }
             }
             ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+
             if (createsTuple) {
                 SyncTupleItems(parameterTypes.Select((x, i) => new Tuple<int, Type>(i, x)).Where(x => x.Item2.IsByRef),
                     returnType, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator);
@@ -242,18 +252,18 @@ namespace DevExpress.Xpf.Core.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
 
-        private static void DoFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, List<FieldInfo> ctorInfos, List<object> ctorArgs,
-            BaseReflectionGeneratorInstanceSetting setting, ILGenerator ilGenerator, MethodBuilder methodBuilder) {
+        private static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+            List<FieldInfo> ctorInfos, List<object> ctorArgs,
+            BaseReflectionGeneratorInstanceSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind) {
+            var fallback = setting.GetFallback(infoKind);
             var fallbackField = typeBuilder.DefineField("field" + wrapperMethodInfo.Name + "fallback",
-                typeof(Action), FieldAttributes.Family);
+                fallback.GetType(), FieldAttributes.Family);
             ctorInfos.Add(fallbackField);
-            ctorArgs.Add(setting.GetFallback());
+            ctorArgs.Add(fallback);
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, fallbackField);
-            ilGenerator.EmitCall(OpCodes.Call, typeof(Action).GetMethod("Invoke"), null);
-            ilGenerator.Emit(OpCodes.Ret);
-            typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
+
 
         private static void SyncTupleItems(IEnumerable<Tuple<int, Type>> tuples, Type returnType, bool skipFirst,
             ILGenerator ilGenerator) {
@@ -351,13 +361,7 @@ namespace DevExpress.Xpf.Core.Internal {
         internal void WriteSetting(MemberInfo info, Action<ReflectionGeneratorInstanceSetting> func) {
             var setting = (ReflectionGeneratorInstanceSetting) GetSetting(info, true);
             func(setting);
-        }
-
-        private enum MemberInfoKind {
-            Method,
-            PropertyGetter,
-            PropertySetter
-        }
+        }        
     }
 
     public static class ReflectionGenerator {
