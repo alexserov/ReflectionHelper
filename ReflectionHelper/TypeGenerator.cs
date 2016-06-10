@@ -74,19 +74,21 @@ namespace DevExpress.Xpf.Core.Internal {
             foreach (var propertyInfo in typeof(TWrapper).GetProperties()) {
                 var setting = GetSetting(propertyInfo);
                 var field = setting.FieldAccessor();
-                if (propertyInfo.GetMethod != null)
+                var getMethod = propertyInfo.GetGetMethod(true);
+                var setMethod = propertyInfo.GetSetMethod(true);
+                if (getMethod != null)
                     if (field)
-                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineFieldGetterOrSetter(typeBuilder, getMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
                     else
-                        DefineMethod(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineMethod(typeBuilder, getMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
-                if (propertyInfo.SetMethod != null)
+                if (setMethod != null)
                     if (field)
-                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineFieldGetterOrSetter(typeBuilder, setMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
                     else
-                        DefineMethod(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineMethod(typeBuilder, setMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
             }
             var ctor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
