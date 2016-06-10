@@ -36,6 +36,7 @@ namespace ReflectionHelperTests {
         void PublicVoidMethod();
         void PrivateVoidMethod();
         string PublicStringProperty { get; set; }
+        void FakeMethod();
     }
 
     [TestFixture]

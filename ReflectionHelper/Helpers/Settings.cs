@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 
 namespace DevExpress.Xpf.Core.Internal {
@@ -19,6 +20,10 @@ namespace DevExpress.Xpf.Core.Internal {
         public virtual bool FieldAccessor() {
             return false;
         }
+
+        public virtual Action GetFallback() {
+            return new Action(() => { });
+        }
     }
 
     public class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
@@ -28,6 +33,7 @@ namespace DevExpress.Xpf.Core.Internal {
         public BindingFlags? BindingFlags { get; set; }
         public string Name { get; set; }
         public bool IsField { get; set; }
+        public Action FallbackAction { get; set; }
 
         public override BindingFlags GetBindingFlags() {
             return BindingFlags ?? base.GetBindingFlags();
@@ -39,6 +45,10 @@ namespace DevExpress.Xpf.Core.Internal {
 
         public override bool FieldAccessor() {
             return IsField;
+        }
+
+        public override Action GetFallback() {
+            return FallbackAction ?? base.GetFallback();
         }
     }
 

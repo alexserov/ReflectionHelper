@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 
 namespace DevExpress.Xpf.Core.Internal {
@@ -29,6 +30,11 @@ namespace DevExpress.Xpf.Core.Internal {
             instance.root.WriteSetting(instance.info, x => x.Name = name);
             return instance;
         }
+        public static ReflectionGeneratorMemberInfoInstance<TWrapper> Fallback<TWrapper>(
+            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Action fallbackAction) {
+            instance.root.WriteSetting(instance.info, x => x.FallbackAction = fallbackAction);
+            return instance;
+        }
     }
 
     public static class ReflectionGeneratorPropertyMemberInfoInstanceExtensions {
@@ -49,6 +55,12 @@ namespace DevExpress.Xpf.Core.Internal {
             return
                 (ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>)
                     ReflectionGeneratorMemberInfoInstanceExtensions.Name(instance, name);
+        }
+        public static ReflectionGeneratorMemberInfoInstance<TWrapper> Fallback<TWrapper>(
+            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Action fallbackAction) {
+            return
+                (ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>)
+                    ReflectionGeneratorMemberInfoInstanceExtensions.Fallback(instance, fallbackAction);
         }
 
         public static ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> FieldAccessor<TWrapper>(

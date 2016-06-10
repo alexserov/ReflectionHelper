@@ -128,9 +128,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
             if (sourceFieldInfo == null) {
-                //TODO non-found method exception
-                ilGenerator.Emit(OpCodes.Ret);
-                typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+                DoFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, methodBuilder);
                 return;
             }
             var returnType = wrapperMethodInfo.ReturnType;
@@ -190,9 +188,7 @@ namespace DevExpress.Xpf.Core.Internal {
                     methodBuilder.DefineGenericParameters(genericParameters.Select(x => x.Name).ToArray());
             var ilGenerator = methodBuilder.GetILGenerator();
             if (sourceMethodInfo == null) {
-                //TODO non-found method exception
-                ilGenerator.Emit(OpCodes.Ret);
-                typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+                DoFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, methodBuilder);
                 return;
             }
             var returnType = wrapperMethodInfo.ReturnType;
@@ -243,6 +239,19 @@ namespace DevExpress.Xpf.Core.Internal {
             }
             ilGenerator.Emit(OpCodes.Ret);
 
+            typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+        }
+
+        private static void DoFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, List<FieldInfo> ctorInfos, List<object> ctorArgs,
+            BaseReflectionGeneratorInstanceSetting setting, ILGenerator ilGenerator, MethodBuilder methodBuilder) {
+            var fallbackField = typeBuilder.DefineField("field" + wrapperMethodInfo.Name + "fallback",
+                typeof(Action), FieldAttributes.Family);
+            ctorInfos.Add(fallbackField);
+            ctorArgs.Add(setting.GetFallback());
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldfld, fallbackField);
+            ilGenerator.EmitCall(OpCodes.Call, typeof(Action).GetMethod("Invoke"), null);
+            ilGenerator.Emit(OpCodes.Ret);
             typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
 

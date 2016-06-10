@@ -147,8 +147,6 @@ namespace DevExpress.Xpf.Core.Internal {
                 var isValueType = mi.DeclaringType.IsValueType;
                 ig.Emit(OpCodes.Ldarg_0);
                 CastClass(ig, thisArgType, mi.DeclaringType);
-                //TODO
-                //ig.Emit(OpCodes.Pop);
                 if (isValueType) {
                     ig.Emit(OpCodes.Stloc_0);
                     ig.Emit(OpCodes.Ldloca_S, 0);

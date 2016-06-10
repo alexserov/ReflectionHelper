@@ -23,9 +23,13 @@ namespace DevExpress.Xpf.Core.Internal {
                 this.name = name;
             }
         }
-        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
-        public class WrapResultAttribute : Attribute {
-            
-        }
+        //[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+        //public class WrapResultAttribute : Attribute {
+        //    private readonly Type tInterface;
+
+        //    public WrapResultAttribute(Type tInterface) {
+        //        this.tInterface = tInterface;
+        //    }
+        //}
     }
 }
