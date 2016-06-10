@@ -216,7 +216,7 @@ namespace DevExpress.Xpf.Core.Internal {
             if (mi.IsVirtual && !callVirtIfNeeded)
                 dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, mi.DeclaringType, true);
             else
-                dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, true);
+                dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, true);            
             var ig = dm.GetILGenerator();
             //AssemblyName asmName = new AssemblyName("abc");
             //var assemblyBuilder = Thread.GetDomain()
@@ -389,8 +389,6 @@ namespace DevExpress.Xpf.Core.Internal {
             }
             ig.Emit(OpCodes.Ret);
             return dm.CreateDelegate(delegateType);
-        }
-
-      
+        }      
     }       
 }

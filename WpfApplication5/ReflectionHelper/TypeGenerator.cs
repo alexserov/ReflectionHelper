@@ -135,7 +135,19 @@ namespace DevExpress.Xpf.Core.Internal {
                 ilGenerator.Emit(OpCodes.Ldc_I4_1);
             else
                 ilGenerator.Emit(OpCodes.Ldc_I4_0);
-            ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.GetDelegateMethodInfo, null);
+            var methodInfo = ReflectionGeneratedObject.GetDelegateMethodInfo;
+            if (genericParameters.Length > 0) {
+                ilGenerator.Emit(OpCodes.Ldc_I4, genericParameters.Length);
+                ilGenerator.Emit(OpCodes.Newarr, typeof(Type));
+                for (int i = 0; i < genericParameters.Length; i++) {
+                    ilGenerator.Emit(OpCodes.Dup);
+                    ilGenerator.Emit(OpCodes.Ldc_I4, i);
+                    ilGenerator.Emit(OpCodes.Ldtoken, genericParameterBuilders[i]);
+                    ilGenerator.Emit(OpCodes.Stelem_Ref);
+                }
+                methodInfo = ReflectionGeneratedObject.GetGenericDelegateMethodInfo;
+            }
+            ilGenerator.EmitCall(OpCodes.Call, methodInfo, null);
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
@@ -271,7 +283,7 @@ namespace DevExpress.Xpf.Core.Internal {
         }
 
         public static void Save() {
-            assemblyBuilder.Save("myasm.dll");
+            assemblyBuilder.Save($"myasm{DateTime.Now.Minute}.dll");
         }
     }
 }
