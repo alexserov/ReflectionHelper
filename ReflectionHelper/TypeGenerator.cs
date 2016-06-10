@@ -10,7 +10,7 @@ namespace DevExpress.Xpf.Core.Internal {
     public class BaseReflectionGeneratorInstance {
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
     }
-    public class ReflectionGeneratorInstance<TWrapper> : BaseReflectionGeneratorInstance where TWrapper : class {
+    public class ReflectionGeneratorInstance<TWrapper> : BaseReflectionGeneratorInstance {
         private object element;
         private ModuleBuilder moduleBuilder;
         private Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
@@ -27,9 +27,9 @@ namespace DevExpress.Xpf.Core.Internal {
             return this;
         }
 
-        public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMember(
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> DefineMember(
             Expression<Func<TWrapper, object>> expression) {
-            return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MemberExpression).Member,
+            return new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>((expression.Body as MemberExpression).Member,
                 this);
         }
 
@@ -278,8 +278,11 @@ namespace DevExpress.Xpf.Core.Internal {
             moduleBuilder = assemblyBuilder.DefineDynamicModule(typesModuleName, typesAssemblyName + ".dll");
         }
 
-        public static ReflectionGeneratorInstance<TWrapper> Wrap2<TWrapper>(this object element) where TWrapper : class {
+        public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TWrapper>(this object element) {
             return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element);
+        }
+        public static TWrapper Wrap<TWrapper>(this object element) {
+            return element.DefineWrapper<TWrapper>().Create();
         }
 
         public static void Save() {

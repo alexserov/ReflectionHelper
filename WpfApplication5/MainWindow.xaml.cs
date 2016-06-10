@@ -24,7 +24,7 @@ namespace WpfApplication5 {
             InitializeComponent();
             var sc = new SomeClass() {};
 
-            var isc = sc.Wrap2<ISomeClass>()
+            var isc = sc.DefineWrapper<ISomeClass>()
                 //.DefineMember(x => x.Name)
                 //.Name("Name2")
                 //.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)

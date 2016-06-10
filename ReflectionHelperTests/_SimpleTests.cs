@@ -43,14 +43,14 @@ namespace ReflectionHelperTests {
         [Test]
         public void PublicVoidMethodTest() {
             Class1 cl = new Class1();
-            var wrapped = cl.Wrap2<IClass1>().Create();
+            var wrapped = cl.Wrap<IClass1>();
             wrapped.PublicVoidMethod();
             Assert.AreEqual("PublicVoidMethod", cl.LastMethod);
         }
         [Test]
         public void PrivateVoidMethodTest() {
             Class1 cl = new Class1();
-            var wrapped = cl.Wrap2<IClass1>()
+            var wrapped = cl.DefineWrapper<IClass1>()
                 .DefineMember(x => x.PrivateVoidMethod())
                 .BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)
                 .EndMember()
@@ -61,7 +61,7 @@ namespace ReflectionHelperTests {
         [Test]
         public void PublicStringPropertyTest() {
             Class1 cl = new Class1();
-            var wrapped = cl.Wrap2<IClass1>()
+            var wrapped = cl.DefineWrapper<IClass1>()
                 .Create();
             wrapped.PublicStringProperty = "hello";
             Assert.AreEqual("set_PublicStringProperty", cl.LastMethod);

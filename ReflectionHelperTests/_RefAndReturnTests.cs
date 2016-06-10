@@ -34,7 +34,7 @@ namespace ReflectionHelperTests {
         [Test]
         public void StringStringTest() {
             var cl3 = new Class3();
-            var wrapped = cl3.Wrap2<IClass3>().Create();
+            var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var result = wrapped.StringString(ref str);
             Assert.AreEqual("abc", result);
@@ -43,7 +43,7 @@ namespace ReflectionHelperTests {
         [Test]
         public void StringStringVisibility() {
             var cl3 = new Class3();
-            var wrapped = cl3.Wrap2<IClass3>().Create();
+            var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var visib = Visibility.Collapsed;
             var result = wrapped.StringStringVisibility(ref str, ref visib);
@@ -54,7 +54,7 @@ namespace ReflectionHelperTests {
         [Test]
         public void StringStringVisibilityOutRef() {
             var cl3 = new Class3();
-            var wrapped = cl3.Wrap2<IClass3>().Create();
+            var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var visib = Visibility.Collapsed;
             var result = wrapped.StringStringVisibilityOutRef(out str, ref visib);

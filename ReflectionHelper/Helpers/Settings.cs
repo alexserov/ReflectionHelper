@@ -22,6 +22,7 @@ namespace DevExpress.Xpf.Core.Internal {
 
         public BindingFlags? BindingFlags { get; set; }
         public string Name { get; set; }
+        public bool IsField { get; set; }
 
         public override BindingFlags GetBindingFlags() {
             return BindingFlags ?? base.GetBindingFlags();
