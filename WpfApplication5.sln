@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WpfApplication5", "WpfApplication5\WpfApplication5.csproj", "{48635B88-28FA-407D-8C53-F091998C7C46}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReflectionHelper", "ReflectionHelper\ReflectionHelper.csproj", "{B503D08F-5677-49C1-A5BC-3A97976F9666}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReflectionHelperTests", "ReflectionHelperTests\ReflectionHelperTests.csproj", "{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}"
@@ -15,10 +13,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{48635B88-28FA-407D-8C53-F091998C7C46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{48635B88-28FA-407D-8C53-F091998C7C46}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{48635B88-28FA-407D-8C53-F091998C7C46}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{48635B88-28FA-407D-8C53-F091998C7C46}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Release|Any CPU.ActiveCfg = Release|Any CPU
