@@ -7,7 +7,7 @@ using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    public class Class3 {
+    class Class3 {
         public string StringString(ref string value) {
             value = "def";
             return "abc";

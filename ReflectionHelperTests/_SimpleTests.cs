@@ -51,7 +51,7 @@ namespace ReflectionHelperTests {
         public void PrivateVoidMethodTest() {
             Class1 cl = new Class1();
             var wrapped = cl.DefineWrapper<IClass1>()
-                .DefineMember(x => x.PrivateVoidMethod())
+                .DefineMethod(x => x.PrivateVoidMethod())
                 .BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)
                 .EndMember()
                 .Create();

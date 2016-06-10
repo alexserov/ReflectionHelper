@@ -14,10 +14,12 @@ namespace DevExpress.Xpf.Core.Internal {
         private object element;
         private ModuleBuilder moduleBuilder;
         private Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
+        private bool isStatic;
 
-        public ReflectionGeneratorInstance(ModuleBuilder builder, object element) {
+        public ReflectionGeneratorInstance(ModuleBuilder builder, object element, bool isStatic) {
             this.element = element;
             this.moduleBuilder = builder;
+            this.isStatic = this.isStatic;
             settings = new Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting>();
         }
 
@@ -27,13 +29,13 @@ namespace DevExpress.Xpf.Core.Internal {
             return this;
         }
 
-        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> DefineMember(
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> DefineProperty(
             Expression<Func<TWrapper, object>> expression) {
             return new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>((expression.Body as MemberExpression).Member,
                 this);
         }
 
-        public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMember(
+        public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMethod(
             Expression<Action<TWrapper>> expression) {
             return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MethodCallExpression).Method,
                 this);
@@ -62,16 +64,25 @@ namespace DevExpress.Xpf.Core.Internal {
                 if (wrapperMethodInfo.IsSpecialName)
                     continue;
                 DefineMethod(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, sourceType,
-                    sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method);
+                    sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method, isStatic);
             }
             foreach (PropertyInfo propertyInfo in typeof(TWrapper).GetProperties()) {
                 var setting = GetSetting(propertyInfo);
+                var field = setting.FieldAccessor();
                 if (propertyInfo.GetMethod != null)
-                    DefineMethod(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
-                        sourceObjectField, setting, MemberInfoKind.PropertyGetter);
+                    if (field)
+                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
+                            sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
+                    else
+                        DefineMethod(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
+                            sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
                 if (propertyInfo.SetMethod != null)
-                    DefineMethod(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
-                        sourceObjectField, setting, MemberInfoKind.PropertySetter);
+                    if (field)
+                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
+                            sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
+                    else
+                        DefineMethod(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
+                            sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
             }
             var ctor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
                 ctorArgs.Select(x => x.GetType()).ToArray());
@@ -89,15 +100,66 @@ namespace DevExpress.Xpf.Core.Internal {
             return (TWrapper) Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
-        private static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
-            BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method) {
-            var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo, setting, method),
+            BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
+            var sourceFieldInfo = sourceType.GetField(GetTargetName(wrapperMethodInfo.Name.Remove(0,4), setting, MemberInfoKind.Method),
+                setting.GetBindingFlags() | (isStatic ? BindingFlags.Static : 0));
+            FieldBuilder fieldInfo = null;
+            if (sourceFieldInfo != null) {
+                fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceFieldInfo.GetType(),
+                    FieldAttributes.Family);
+                ctorInfos.Add(fieldInfo);
+                ctorArgs.Add(sourceFieldInfo);
+            }
+
+            var parameterTypes = wrapperMethodInfo.GetParameters().Select(x => x.ParameterType).ToArray();
+            var methodBuilder = typeBuilder.DefineMethod(wrapperMethodInfo.Name,
+                MethodAttributes.Public | MethodAttributes.Virtual, wrapperMethodInfo.ReturnType,
+                parameterTypes);
+            GenericTypeParameterBuilder[] genericParameterBuilders = null;            
+            var ilGenerator = methodBuilder.GetILGenerator();
+            if (sourceFieldInfo == null) {
+                //TODO non-found method exception
+                ilGenerator.Emit(OpCodes.Ret);
+                typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+                return;
+            }
+            var returnType = wrapperMethodInfo.ReturnType;
+            bool useTuple = false;
+            var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
+                typeof(object), out useTuple);            
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);            
+            ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
+            ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+            ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
+            ilGenerator.EmitCall(OpCodes.Call,
+                method == MemberInfoKind.PropertyGetter
+                    ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
+                    : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
+            ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
+            for (byte i = 0; i < parameterTypes.Length; i++) {
+                ilGenerator.Emit(OpCodes.Ldarg, i + 1);                
+            }
+            ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);            
+            ilGenerator.Emit(OpCodes.Ret);
+
+            typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+        }
+        static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+            List<FieldInfo> ctorInfos,
+            List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
+            BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
+            var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo.Name, setting, method),
                 setting.GetBindingFlags());
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
-                fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, typeof(Delegate),
+                fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceMethodInfo.GetType(),
                     FieldAttributes.Family);
                 ctorInfos.Add(fieldInfo);
                 ctorArgs.Add(sourceMethodInfo);
@@ -239,14 +301,14 @@ namespace DevExpress.Xpf.Core.Internal {
             return type.GetMethod($"get_Item{i + 1}");
         }
 
-        private static string GetTargetName(MethodInfo wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
+        private static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
             MemberInfoKind kind) {
-            var result = setting.GetName(wrapperMethodInfo.Name);
+            var result = setting.GetName(wrapperMethodInfo);
             if (kind == MemberInfoKind.PropertyGetter && !result.StartsWith("get_"))
                 return "get_" + result;
             if (kind == MemberInfoKind.PropertySetter && !result.StartsWith("set_"))
                 return "set_" + result;
-            return wrapperMethodInfo.Name;
+            return wrapperMethodInfo;
         }
 
         private BaseReflectionGeneratorInstanceSetting GetSetting(MemberInfo wrapperMethodInfo, bool createNew = false) {
@@ -261,7 +323,7 @@ namespace DevExpress.Xpf.Core.Internal {
             return new NullReflectionGeneratorInstanceSetting(this);
         }
 
-        public void WriteSetting(MemberInfo info, Action<ReflectionGeneratorInstanceSetting> func) {
+        internal void WriteSetting(MemberInfo info, Action<ReflectionGeneratorInstanceSetting> func) {
             var setting = (ReflectionGeneratorInstanceSetting) GetSetting(info, true);
             func(setting);
         }
@@ -279,10 +341,19 @@ namespace DevExpress.Xpf.Core.Internal {
         }
 
         public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TWrapper>(this object element) {
-            return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element);
+            return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element, false);
+        }
+        public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TWrapper>(this Type element) {
+            return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element, true);
         }
         public static TWrapper Wrap<TWrapper>(this object element) {
             return element.DefineWrapper<TWrapper>().Create();
+        }
+        public static TWrapper Wrap<TWrapper>(this Type targetType) {
+            return targetType.DefineWrapper<TWrapper>().Create();
+        }
+        public static TWrapper Wrap<TType, TWrapper>() {
+            return typeof(TType).Wrap<TWrapper>();
         }
 
         public static void Save() {

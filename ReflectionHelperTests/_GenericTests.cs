@@ -7,7 +7,7 @@ using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    public class Class6 {
+    class Class6 {
         public Type GenericMethod<TArgument>() {
             return typeof(TArgument);
         }

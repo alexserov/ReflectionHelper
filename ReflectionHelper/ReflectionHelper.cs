@@ -365,30 +365,33 @@ namespace DevExpress.Xpf.Core.Internal {
         static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType, Type declaringType,
             string fieldName, BindingFlags bFlags) {
             FieldInfo fieldInfo = declaringType.GetField(fieldName, bFlags);
+            return CreateFieldGetterOrSetter(isGetter, delegateType, fieldInfo, typeof(TElement), typeof(TField));
+        }
+
+        internal static Delegate CreateFieldGetterOrSetter(bool isGetter, Type delegateType, FieldInfo fieldInfo, Type tElement, Type tField) {
             bool isStatic = fieldInfo.IsStatic;
             DynamicMethod dm;
             if (isGetter)
-                dm = new DynamicMethod(string.Empty, typeof(TField), new Type[] {typeof(TElement)}, true);
+                dm = new DynamicMethod(string.Empty, tField, new Type[] { tElement }, true);
             else
-                dm = new DynamicMethod(string.Empty, typeof(void), new Type[] {typeof(TElement), typeof(TField)}, true);
+                dm = new DynamicMethod(string.Empty, typeof(void), new Type[] { tElement, tField }, true);
             var ig = dm.GetILGenerator();
 
             short argIndex = 0;
             if (!isStatic) {
                 ig.Emit(OpCodes.Ldarg, argIndex++);
-                CastClass(ig, typeof(TElement), fieldInfo.DeclaringType);
+                CastClass(ig, tElement, fieldInfo.DeclaringType);
             }
             if (!isGetter) {
                 ig.Emit(OpCodes.Ldarg, argIndex++);
-                CastClass(ig, typeof(TField), fieldInfo.FieldType);
+                CastClass(ig, tField, fieldInfo.FieldType);
                 ig.Emit(isStatic ? OpCodes.Stsfld : OpCodes.Stfld, fieldInfo);
-            }
-            else {
+            } else {
                 ig.Emit(isStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, fieldInfo);
-                CastClass(ig, fieldInfo.FieldType, typeof(TField));
+                CastClass(ig, fieldInfo.FieldType, tField);
             }
             ig.Emit(OpCodes.Ret);
             return dm.CreateDelegate(delegateType);
-        }      
+        }
     }       
 }

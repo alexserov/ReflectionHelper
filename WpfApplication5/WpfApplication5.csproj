@@ -102,6 +102,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ReflectionHelperTests\ReflectionHelperTests.csproj">
+      <Project>{ca19ccfc-4e54-4994-a9d8-c1bed29a3960}</Project>
+      <Name>ReflectionHelperTests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ReflectionHelper\ReflectionHelper.csproj">
       <Project>{b503d08f-5677-49c1-a5bc-3a97976f9666}</Project>
       <Name>ReflectionHelper</Name>

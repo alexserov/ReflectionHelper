@@ -23,7 +23,7 @@ namespace ReflectionHelperTests {
         }
     }
 
-    interface IFluentAPITestObject {
+    public interface IFluentAPITestObject {
         string stringField { get; set; }
         string PublicStringProperty { get; set; }
         string PrivateStringProperty { get; set; }
@@ -38,17 +38,19 @@ namespace ReflectionHelperTests {
         public void Simple() {
             var tc = new FulentAPITestObject();
             var ti = tc.DefineWrapper<IFluentAPITestObject>()
-                .DefineMember(x => x.PrivateStringProperty)
+                .DefineProperty(x => x.PrivateStringProperty)
                     .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
                     .EndMember()
-                .DefineMember(x=>x.stringField)
+                .DefineProperty(x=>x.stringField)
                     .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
                     .FieldAccessor()
                     .EndMember()
-                .DefineMember(x=>x.PrivateMethod(null))
+                .DefineMethod(x=>x.PrivateMethod(null))
                     .BindingFlags(BindingFlags.Instance | BindingFlags.NonPublic)
                     .EndMember()
                 .Create();
+            ti.stringField = "hello";
+            Assert.AreEqual("hello", ti.stringField);
         }
     }
 }

@@ -7,7 +7,7 @@ using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    public class Class4 {
+    class Class4 {
         public void _Boolean(out Boolean value) {
             value = true;
         }

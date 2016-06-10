@@ -7,7 +7,7 @@ using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    public class Class5 {
+    class Class5 {
         public string String { get; set; }
         public void OptionalParamsMethod1(string str = "hello") {
             String = str;

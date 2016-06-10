@@ -15,6 +15,9 @@ namespace DevExpress.Xpf.Core.Internal {
         public virtual string GetName(string defaultName) {
             return defaultName;
         }
+        public  virtual bool FieldAccessor() {
+            return false;
+        }
     }
     public class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public ReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
@@ -30,6 +33,10 @@ namespace DevExpress.Xpf.Core.Internal {
 
         public override string GetName(string defaultName) {
             return Name ?? base.GetName(defaultName);
+        }
+
+        public override bool FieldAccessor() {
+            return IsField;
         }
     }
 

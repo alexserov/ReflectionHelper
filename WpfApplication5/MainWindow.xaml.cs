@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using DevExpress.Xpf.Core.Internal;
+using ReflectionHelperTests;
 
 namespace WpfApplication5 {
     /// <summary>
@@ -21,11 +22,12 @@ namespace WpfApplication5 {
     /// </summary>
     public partial class MainWindow : Window {
         public MainWindow() {
+            new FluentAPITests().Simple();
             InitializeComponent();
             var sc = new SomeClass() {};
 
             var isc = sc.DefineWrapper<ISomeClass>()
-                //.DefineMember(x => x.Name)
+                //.DefineProperty(x => x.Name)
                 //.Name("Name2")
                 //.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)
                 ////.FieldAccessor()
