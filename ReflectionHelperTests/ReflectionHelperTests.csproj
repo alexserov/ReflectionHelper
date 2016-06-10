@@ -44,8 +44,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="_GenericTests.cs" />
+    <Compile Include="_OptionalParameterTests.cs" />
+    <Compile Include="_OutTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tests.cs" />
+    <Compile Include="_RefAndReturnTests.cs" />
+    <Compile Include="_RefTests.cs" />
+    <Compile Include="_SimpleTests.cs" />
+    <Compile Include="Classes.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
