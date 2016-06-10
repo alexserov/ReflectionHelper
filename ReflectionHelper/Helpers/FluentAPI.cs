@@ -56,8 +56,8 @@ namespace DevExpress.Xpf.Core.Internal {
                 (ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>)
                     ReflectionGeneratorMemberInfoInstanceExtensions.Name(instance, name);
         }
-        public static ReflectionGeneratorMemberInfoInstance<TWrapper> Fallback<TWrapper>(
-            this ReflectionGeneratorMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
+        public static ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> Fallback<TWrapper>(
+            this ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> instance, Delegate fallbackAction) {
             return
                 (ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>)
                     ReflectionGeneratorMemberInfoInstanceExtensions.Fallback(instance, fallbackAction);
