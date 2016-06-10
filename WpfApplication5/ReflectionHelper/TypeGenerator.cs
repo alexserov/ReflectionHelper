@@ -61,16 +61,16 @@ namespace DevExpress.Xpf.Core.Internal {
             foreach (var wrapperMethodInfo in typeof(TWrapper).GetMethods()) {
                 if (wrapperMethodInfo.IsSpecialName)
                     continue;
-                DefineMethod<TWrapper>(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, sourceType,
+                DefineMethod(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, sourceType,
                     sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method);
             }
             foreach (PropertyInfo propertyInfo in typeof(TWrapper).GetProperties()) {
                 var setting = GetSetting(propertyInfo);
                 if (propertyInfo.GetMethod != null)
-                    DefineMethod<TWrapper>(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
+                    DefineMethod(typeBuilder, propertyInfo.GetMethod, ctorInfos, ctorArgs, sourceType,
                         sourceObjectField, setting, MemberInfoKind.PropertyGetter);
                 if (propertyInfo.SetMethod != null)
-                    DefineMethod<TWrapper>(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
+                    DefineMethod(typeBuilder, propertyInfo.SetMethod, ctorInfos, ctorArgs, sourceType,
                         sourceObjectField, setting, MemberInfoKind.PropertySetter);
             }
             var ctor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
@@ -89,7 +89,7 @@ namespace DevExpress.Xpf.Core.Internal {
             return (TWrapper) Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
-        private static void DefineMethod<TWrapper>(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        private static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method) {
