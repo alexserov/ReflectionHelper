@@ -37,28 +37,10 @@ namespace ReflectionHelperTests {
         void PrivateVoidMethod();
         string PublicStringProperty { get; set; }
     }
-
-    public interface IObject {
-        string Property { get; set; }
-        void Method();
-    }
-
+    
     [TestFixture]
     class Tests {
-        [Test]
-        public void FallbackTest() {
-            var wrapper = new object().DefineWrapper<IObject>()
-                .DefineProperty(x => x.Property)
-                .GetterFallback(new Func<object, string>(x => "hello"))
-                .SetterFallback(new Action<object>(x => { }))
-                .EndMember()
-                .DefineMethod(x => x.Method())
-                .Fallback(new Action<object>(x => { }))
-                .EndMember()
-                .Create();
-            Assert.AreEqual("hello", wrapper.Property);
-            wrapper.Method();
-        }
+       
         [Test]
         public void PublicVoidMethodTest() {
             Class1 cl = new Class1();
