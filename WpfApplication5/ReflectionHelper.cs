@@ -716,9 +716,14 @@ namespace DevExpress.Xpf.Core.Internal {
             }
 
             var parameterTypes = wrapperMethodInfo.GetParameters().Select(x => x.ParameterType).ToArray();
+            var genericParameters = wrapperMethodInfo.GetGenericArguments();
             var methodBuilder = typeBuilder.DefineMethod(wrapperMethodInfo.Name,
                 MethodAttributes.Public | MethodAttributes.Virtual, wrapperMethodInfo.ReturnType,
                 parameterTypes);
+            GenericTypeParameterBuilder[] genericParameterBuilders = null;
+            if (genericParameters.Length > 0)
+                genericParameterBuilders =
+                    methodBuilder.DefineGenericParameters(genericParameters.Select(x => x.Name).ToArray());
             var ilGenerator = methodBuilder.GetILGenerator();
             if (sourceMethodInfo == null) {
                 //TODO non-found method exception
