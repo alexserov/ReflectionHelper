@@ -1,14 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
-namespace WpfApplication5 {
+namespace ReflectionHelperTests {
+    public enum Visibility {
+        Collapsed,
+        Visible,
+        Hidden
+    }
+
     public class Class1 {
         private string publicStringProperty;
         public string LastMethod { get; set; }

@@ -60,14 +60,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ReflectionHelper\Helpers\Settings.cs" />
-    <Compile Include="ReflectionHelper\BaseGeneratedObject.cs" />
-    <Compile Include="ReflectionHelper\ReflectionHelper_API.cs" />
-    <Compile Include="ReflectionHelper\TypeGenerator.cs" />
-    <Compile Include="ReflectionHelper\Helpers\FluentAPI.cs" />
-    <Compile Include="ReflectionHelper\ReflectionHelper.cs" />
-    <Compile Include="ReflectionHelper\Helpers\Attributes.cs" />
-    <Compile Include="Tests.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -108,6 +100,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ReflectionHelper\ReflectionHelper.csproj">
+      <Project>{b503d08f-5677-49c1-a5bc-3a97976f9666}</Project>
+      <Name>ReflectionHelper</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

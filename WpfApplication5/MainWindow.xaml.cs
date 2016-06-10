@@ -21,7 +21,6 @@ namespace WpfApplication5 {
     /// </summary>
     public partial class MainWindow : Window {
         public MainWindow() {
-            new GenericTests().SimpleTest();
             InitializeComponent();
             var sc = new SomeClass() {};
 
