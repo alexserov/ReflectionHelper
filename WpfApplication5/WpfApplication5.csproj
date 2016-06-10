@@ -60,7 +60,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ReflectionHelper.cs" />
+    <Compile Include="ReflectionHelper\Helpers\Settings.cs" />
+    <Compile Include="ReflectionHelper\BaseGeneratedObject.cs" />
+    <Compile Include="ReflectionHelper\TypeGenerator.cs" />
+    <Compile Include="ReflectionHelper\Helpers\FluentAPI.cs" />
+    <Compile Include="ReflectionHelper\ReflectionHelper.cs" />
+    <Compile Include="ReflectionHelper\Helpers\Attributes.cs" />
     <Compile Include="Tests.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
