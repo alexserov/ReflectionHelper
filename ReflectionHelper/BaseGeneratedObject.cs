@@ -18,21 +18,26 @@ namespace DevExpress.Xpf.Core.Internal {
             GetFieldSetterMethodInfo = GetMethodInfo(x => x.GetFieldSetter(null, null, null, null, false));
         }
 
-        static MethodInfo GetMethodInfo(Expression<Action<ReflectionGeneratedObject>> expr) {
-            return (expr.Body as MethodCallExpression).Method;
-        }
         public ReflectionGeneratedObject() {
             cache = new Dictionary<MethodInfo, Delegate>();
         }
 
-        public Delegate GetFieldGetter(FieldInfo info, Type delegateType, Type tElement, Type tField, bool addThisArgForStatic) {
+        private static MethodInfo GetMethodInfo(Expression<Action<ReflectionGeneratedObject>> expr) {
+            return (expr.Body as MethodCallExpression).Method;
+        }
+
+        public Delegate GetFieldGetter(FieldInfo info, Type delegateType, Type tElement, Type tField,
+            bool addThisArgForStatic) {
             return ReflectionHelper.CreateFieldGetterOrSetter(true,
                 delegateType, info, tElement, tField, !addThisArgForStatic);
         }
-        public Delegate GetFieldSetter(FieldInfo info, Type delegateType, Type tElement, Type tField, bool addThisArgForStatic) {
+
+        public Delegate GetFieldSetter(FieldInfo info, Type delegateType, Type tElement, Type tField,
+            bool addThisArgForStatic) {
             return ReflectionHelper.CreateFieldGetterOrSetter(false,
                 delegateType, info, tElement, tField, !addThisArgForStatic);
         }
+
         public Delegate GetGenericDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTyple,
             Type[] paramTypes) {
             return CreateDelegate(info.MakeGenericMethod(paramTypes), instanceType, delegateType, useTyple);
@@ -47,7 +52,7 @@ namespace DevExpress.Xpf.Core.Internal {
             return result;
         }
 
-        Delegate CreateDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTuple) {
+        private Delegate CreateDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTuple) {
             return (Delegate) ReflectionHelper.CreateMethodHandlerImpl(info, instanceType, delegateType, true, useTuple);
         }
     }

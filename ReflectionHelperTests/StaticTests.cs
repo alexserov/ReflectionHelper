@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 using DevExpress.Xpf.Core.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class StaticFulentAPITestObject {
+    internal class StaticFulentAPITestObject {
         private static string stringField;
         public static string PublicStringProperty { get; set; }
         public static string PrivateStringProperty { get; set; }
@@ -17,7 +12,7 @@ namespace ReflectionHelperTests {
             return value;
         }
 
-        static string PrivateMethod(string value) {
+        private static string PrivateMethod(string value) {
             return value;
         }
     }
@@ -37,15 +32,15 @@ namespace ReflectionHelperTests {
         public void Simple() {
             var ti = ReflectionGenerator.DefineWrapper<StaticFulentAPITestObject, IFluentAPITestObject>()
                 .DefineProperty(x => x.PrivateStringProperty)
-                    .BindingFlags(BindingFlags.NonPublic)
-                    .EndMember()
+                .BindingFlags(BindingFlags.NonPublic)
+                .EndMember()
                 .DefineProperty(x => x.stringField)
-                    .BindingFlags(BindingFlags.NonPublic)
-                    .FieldAccessor()
-                    .EndMember()
+                .BindingFlags(BindingFlags.NonPublic)
+                .FieldAccessor()
+                .EndMember()
                 .DefineMethod(x => x.PrivateMethod(null))
-                    .BindingFlags(BindingFlags.NonPublic|BindingFlags.Public)
-                    .EndMember()
+                .BindingFlags(BindingFlags.NonPublic | BindingFlags.Public)
+                .EndMember()
                 .Create();
             Assert.AreEqual("hello", ti.PublicMethod("hello"));
             ti.stringField = "hello";

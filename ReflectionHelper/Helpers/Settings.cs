@@ -15,13 +15,15 @@ namespace DevExpress.Xpf.Core.Internal {
         public virtual string GetName(string defaultName) {
             return defaultName;
         }
-        public  virtual bool FieldAccessor() {
+
+        public virtual bool FieldAccessor() {
             return false;
         }
     }
+
     public class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public ReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
-            : base(reflectionGeneratorInstance) { }
+            : base(reflectionGeneratorInstance) {}
 
         public BindingFlags? BindingFlags { get; set; }
         public string Name { get; set; }
@@ -42,6 +44,6 @@ namespace DevExpress.Xpf.Core.Internal {
 
     public class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public NullReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
-            : base(reflectionGeneratorInstance) { }
+            : base(reflectionGeneratorInstance) {}
     }
 }

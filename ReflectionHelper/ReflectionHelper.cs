@@ -3,113 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DevExpress.Xpf.Core.Internal {
     public partial class ReflectionHelper {
-        #region inner classes
-
-        struct HelperKey {
-            public bool Equals(HelperKey other) {
-                var simpleattr = type == other.type
-                                 && string.Equals(handlerName, other.handlerName)
-                                 && handlerType == other.handlerType
-                                 && parametersCount == other.parametersCount
-                                 && callVirtIfNeeded == other.callVirtIfNeeded
-                                 && hasTypeParameters == other.hasTypeParameters;
-                if (!simpleattr)
-                    return false;
-                if (hasTypeParameters) {
-                    if (typeParameters.Length != other.typeParameters.Length)
-                        return false;
-                    for (int i = 0; i < typeParameters.Length; i++) {
-                        if (typeParameters[i] != other.typeParameters[i])
-                            return false;
-                    }
-                }
-                return true;
-            }
-
-            public override bool Equals(object obj) {
-                if (ReferenceEquals(null, obj))
-                    return false;
-                return obj is HelperKey && Equals((HelperKey) obj);
-            }
-
-            public override int GetHashCode() {
-                return getHashCode;
-            }
-
-            int GetHashCodeInternal() {
-                unchecked {
-                    int hashCode = (type != null ? type.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (handlerName != null ? handlerName.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ (handlerType != null ? handlerType.GetHashCode() : 0);
-                    if (typeParameters != null)
-                        foreach (var element in typeParameters)
-                            hashCode = (hashCode*397) ^ (element != null ? element.GetHashCode() : 0);
-                    hashCode = (hashCode*397) ^ callVirtIfNeeded.GetHashCode();
-                    hashCode = (hashCode*397) ^ parametersCount.GetHashCode();
-                    return hashCode;
-                }
-            }
-
-            public HelperKey(Type type, string handlerName, Type handlerType, int? parametersCount,
-                Type[] typeParameters, bool callVirtIfNeeded) {
-                this.type = type;
-                this.handlerName = handlerName;
-                this.handlerType = handlerType;
-
-                this.parametersCount = parametersCount;
-                this.typeParameters = typeParameters;
-                this.callVirtIfNeeded = callVirtIfNeeded;
-                this.hasTypeParameters = typeParameters != null;
-                this.getHashCode = 0;
-                this.getHashCode = GetHashCodeInternal();
-            }
-
-            public static bool operator ==(HelperKey left, HelperKey right) {
-                return left.Equals(right);
-            }
-
-            public static bool operator !=(HelperKey left, HelperKey right) {
-                return !left.Equals(right);
-            }
-
-            readonly Type type;
-            readonly string handlerName;
-            readonly Type handlerType;
-            readonly int? parametersCount;
-            readonly int getHashCode;
-            readonly Type[] typeParameters;
-            readonly bool hasTypeParameters;
-            readonly bool callVirtIfNeeded;
-        }
-
-        #endregion
-
-        Dictionary<HelperKey, object> InvokeInfo { get; set; }
-        Dictionary<HelperKey, Type> PropertyTypeInfo { get; set; }
-
-        public bool HasContent {
-            get { return InvokeInfo.Count > 0; }
-        }
-
         public ReflectionHelper() {
             InvokeInfo = new Dictionary<HelperKey, object>();
             PropertyTypeInfo = new Dictionary<HelperKey, Type>();
         }
 
-        Func<object, object> CreateGetter(PropertyInfo info) {
+        private Dictionary<HelperKey, object> InvokeInfo { get; }
+        private Dictionary<HelperKey, Type> PropertyTypeInfo { get; }
+
+        public bool HasContent {
+            get { return InvokeInfo.Count > 0; }
+        }
+
+        private Func<object, object> CreateGetter(PropertyInfo info) {
             return
                 (Func<object, object>)
                     CreateMethodHandlerImpl(info.GetGetMethod(true), null, typeof(Func<object, object>), true);
         }
 
-        Action<object, object> CreateSetter(PropertyInfo info) {
+        private Action<object, object> CreateSetter(PropertyInfo info) {
             if (!info.CanWrite)
                 throw new NotSupportedException("no setter");
             return
@@ -117,7 +32,7 @@ namespace DevExpress.Xpf.Core.Internal {
                     CreateMethodHandlerImpl(info.GetSetMethod(true), null, typeof(Action<object, object>), true);
         }
 
-        static object CreateMethodHandlerImpl(object instance, string methodName, BindingFlags bindingFlags,
+        private static object CreateMethodHandlerImpl(object instance, string methodName, BindingFlags bindingFlags,
             Type instanceType, Type delegateType, int? parametersCount, Type[] typeParameters, bool callVirtIfNeeded) {
             MethodInfo mi = null;
             if (instance != null)
@@ -126,7 +41,8 @@ namespace DevExpress.Xpf.Core.Internal {
             return CreateMethodHandlerImpl(mi, instanceType, delegateType, callVirtIfNeeded);
         }
 
-        static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags, int? parametersCount = null,
+        private static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags,
+            int? parametersCount = null,
             Type[] typeParameters = null) {
             if (parametersCount != null) {
                 return
@@ -136,7 +52,7 @@ namespace DevExpress.Xpf.Core.Internal {
             }
             if (typeParameters != null) {
                 return type.GetMethods(bindingFlags).Where(x => x.Name == methodName).First(x => {
-                    int i = 0;
+                    var i = 0;
                     foreach (var param in x.GetParameters()) {
                         if (!typeParameters[i].IsAssignableFrom(param.ParameterType))
                             return false;
@@ -148,15 +64,14 @@ namespace DevExpress.Xpf.Core.Internal {
             return type.GetMethod(methodName, bindingFlags);
         }
 
-        
 
         internal static void CastClass(ILGenerator generator, Type sourceType, Type targetType) {
             if (Equals(null, targetType))
                 return;
             if (sourceType == targetType)
                 return;
-            bool oneIsVoid = typeof(void) == sourceType || typeof(void) == targetType;
-            bool sourceIsNull = Equals(null, sourceType);
+            var oneIsVoid = typeof(void) == sourceType || typeof(void) == targetType;
+            var sourceIsNull = Equals(null, sourceType);
             if (oneIsVoid && !sourceIsNull)
                 throw new InvalidOperationException(string.Format("Cast from {0} to {1} is not supported", sourceType,
                     targetType));
@@ -181,13 +96,13 @@ namespace DevExpress.Xpf.Core.Internal {
 
         internal static object CreateMethodHandlerImpl(MethodInfo mi, Type instanceType, Type delegateType,
             bool callVirtIfNeeded, bool? useTuple2 = null) {
-            bool isStatic = mi.IsStatic;
+            var isStatic = mi.IsStatic;
 
             var thisArgType = instanceType ?? mi.DeclaringType;
             var returnType = mi.ReturnType;
-            bool useTuple = false;
+            var useTuple = false;
             Type[] delegateGenericArguments;
-            bool skipArgumentLengthCheck = false;
+            var skipArgumentLengthCheck = false;
             var sourceParametersTypes = mi.GetParameters().Select(x => x.ParameterType).ToArray();
             if (delegateType == null) {
                 delegateType = MakeGenericDelegate(sourceParametersTypes, ref returnType, isStatic ? null : thisArgType,
@@ -210,26 +125,17 @@ namespace DevExpress.Xpf.Core.Internal {
 
             var resultParametersTypes = delegateGenericArguments.Skip(isStatic ? 0 : 1);
             var dynamicMethodParameterTypes =
-                (isStatic ? resultParametersTypes : new Type[] {thisArgType}.Concat(resultParametersTypes)).ToArray();
+                (isStatic ? resultParametersTypes : new[] {thisArgType}.Concat(resultParametersTypes)).ToArray();
 
             DynamicMethod dm;
             if (mi.IsVirtual && !callVirtIfNeeded)
                 dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, mi.DeclaringType, true);
             else
-                dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, true);            
+                dm = new DynamicMethod(string.Empty, returnType, dynamicMethodParameterTypes, true);
             var ig = dm.GetILGenerator();
-            //AssemblyName asmName = new AssemblyName("abc");
-            //var assemblyBuilder = Thread.GetDomain()
-            //    .DefineDynamicAssembly(asmName, AssemblyBuilderAccess.RunAndSave);
-            //var moduleBuilder = assemblyBuilder.DefineDynamicModule("abcd", "abc" + ".dll");
-            //var typeBuilder = moduleBuilder.DefineType("abcdef");
-            //var mt = typeBuilder.DefineMethod("abcdefg", MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard, returnType,
-            //    dynamicMethodParameterTypes);
-            //var ig = mt.GetILGenerator();
-
 
             byte newLocalIndex = 0;
-            List<LocalBuilder> localBuilders = new List<LocalBuilder>();
+            var localBuilders = new List<LocalBuilder>();
             if (!isStatic) {
                 localBuilders.Add(ig.DeclareLocal(mi.DeclaringType));
                 newLocalIndex = 1;
@@ -248,17 +154,15 @@ namespace DevExpress.Xpf.Core.Internal {
                     ig.Emit(OpCodes.Ldloca_S, 0);
                 }
             }
-            short argumentIndex = mi.IsStatic ? (short) 0 : (short) 1;
+            var argumentIndex = mi.IsStatic ? (short) 0 : (short) 1;
 
-            for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
+            for (var parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
                 var parameter = mi.GetParameters()[argumentIndex - newLocalIndex];
                 if (!parameter.IsOut) {
                     ig.Emit(OpCodes.Ldarg, argumentIndex);
                     CastClass(ig, GetElementTypeIfNeeded(resultParametersTypes.ElementAt(parameterIndex)),
                         GetElementTypeIfNeeded(sourceParametersTypes[parameterIndex]));
                     ig.Emit(OpCodes.Stloc, localBuilders[argumentIndex]);
-                    ////TODO
-                    //ig.EmitWriteLine(localBuilders[argumentIndex]);
                     if (!parameter.ParameterType.IsByRef)
                         ig.Emit(OpCodes.Ldloc, localBuilders[argumentIndex]);
                     else
@@ -279,7 +183,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 if (mi.ReturnType != typeof(void)) {
                     CastClass(ig, mi.ReturnType, returnType.GetGenericArguments()[0]);
                 }
-                for (int parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
+                for (var parameterIndex = 0; parameterIndex < sourceParametersTypes.Length; parameterIndex++) {
                     if (sourceParametersTypes[parameterIndex].IsByRef) {
                         ig.Emit(OpCodes.Ldloc, localBuilders[newLocalIndex + parameterIndex]);
                         CastClass(ig, sourceParametersTypes[parameterIndex].GetElementType(),
@@ -287,19 +191,15 @@ namespace DevExpress.Xpf.Core.Internal {
                     }
                 }
                 ig.Emit(OpCodes.Newobj, returnType.GetConstructors().First(x => x.GetParameters().Length > 0));
-                //ig.Emit(OpCodes.Ldnull);
             }
             else {
                 CastClass(ig, mi.ReturnType, returnType);
             }
             ig.Emit(OpCodes.Ret);
-            //typeBuilder.CreateType();
-            //assemblyBuilder.Save("fileeee");            
-            //return null;
             return dm.CreateDelegate(delegateType);
         }
 
-        static Type GetElementTypeIfNeeded(Type x) {
+        private static Type GetElementTypeIfNeeded(Type x) {
             if (x.IsByRef)
                 return x.GetElementType();
             return x;
@@ -309,7 +209,7 @@ namespace DevExpress.Xpf.Core.Internal {
             out bool useTuple) {
             useTuple = false;
             Type resultType = null;
-            bool hasReturnType = returnType != null && returnType != typeof(void);
+            var hasReturnType = returnType != null && returnType != typeof(void);
             var parametersCount = parameterTypes.Length;
             if (thisArgType != null)
                 parametersCount += 1;
@@ -362,21 +262,23 @@ namespace DevExpress.Xpf.Core.Internal {
             return resultType.MakeGenericType(lst.ToArray());
         }
 
-        static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType, Type declaringType,
+        private static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType,
+            Type declaringType,
             string fieldName, BindingFlags bFlags) {
-            FieldInfo fieldInfo = declaringType.GetField(fieldName, bFlags);
+            var fieldInfo = declaringType.GetField(fieldName, bFlags);
             return CreateFieldGetterOrSetter(isGetter, delegateType, fieldInfo, typeof(TElement), typeof(TField), true);
         }
 
-        internal static Delegate CreateFieldGetterOrSetter(bool isGetter, Type delegateType, FieldInfo fieldInfo, Type tElement, Type tField, bool addThisArgForStatic) {
-            bool isStatic = fieldInfo.IsStatic;
+        internal static Delegate CreateFieldGetterOrSetter(bool isGetter, Type delegateType, FieldInfo fieldInfo,
+            Type tElement, Type tField, bool addThisArgForStatic) {
+            var isStatic = fieldInfo.IsStatic;
             DynamicMethod dm;
             if (isGetter)
                 dm = new DynamicMethod(string.Empty, tField,
-                    (!addThisArgForStatic && isStatic) ? null : new Type[] {tElement}, true);
+                    !addThisArgForStatic && isStatic ? null : new[] {tElement}, true);
             else
                 dm = new DynamicMethod(string.Empty, typeof(void),
-                    (!addThisArgForStatic && isStatic) ? new Type[] {tField} : new Type[] {tElement, tField}, true);
+                    !addThisArgForStatic && isStatic ? new[] {tField} : new[] {tElement, tField}, true);
             var ig = dm.GetILGenerator();
 
             short argIndex = 0;
@@ -388,12 +290,94 @@ namespace DevExpress.Xpf.Core.Internal {
                 ig.Emit(OpCodes.Ldarg, argIndex++);
                 CastClass(ig, tField, fieldInfo.FieldType);
                 ig.Emit(isStatic ? OpCodes.Stsfld : OpCodes.Stfld, fieldInfo);
-            } else {
+            }
+            else {
                 ig.Emit(isStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, fieldInfo);
                 CastClass(ig, fieldInfo.FieldType, tField);
             }
             ig.Emit(OpCodes.Ret);
             return dm.CreateDelegate(delegateType);
         }
-    }       
+
+        #region inner classes
+
+        private struct HelperKey {
+            public bool Equals(HelperKey other) {
+                var simpleattr = type == other.type
+                                 && string.Equals(handlerName, other.handlerName)
+                                 && handlerType == other.handlerType
+                                 && parametersCount == other.parametersCount
+                                 && callVirtIfNeeded == other.callVirtIfNeeded
+                                 && hasTypeParameters == other.hasTypeParameters;
+                if (!simpleattr)
+                    return false;
+                if (hasTypeParameters) {
+                    if (typeParameters.Length != other.typeParameters.Length)
+                        return false;
+                    for (var i = 0; i < typeParameters.Length; i++) {
+                        if (typeParameters[i] != other.typeParameters[i])
+                            return false;
+                    }
+                }
+                return true;
+            }
+
+            public override bool Equals(object obj) {
+                if (ReferenceEquals(null, obj))
+                    return false;
+                return obj is HelperKey && Equals((HelperKey) obj);
+            }
+
+            public override int GetHashCode() {
+                return getHashCode;
+            }
+
+            private int GetHashCodeInternal() {
+                unchecked {
+                    var hashCode = type != null ? type.GetHashCode() : 0;
+                    hashCode = (hashCode*397) ^ (handlerName != null ? handlerName.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ (handlerType != null ? handlerType.GetHashCode() : 0);
+                    if (typeParameters != null)
+                        foreach (var element in typeParameters)
+                            hashCode = (hashCode*397) ^ (element != null ? element.GetHashCode() : 0);
+                    hashCode = (hashCode*397) ^ callVirtIfNeeded.GetHashCode();
+                    hashCode = (hashCode*397) ^ parametersCount.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public HelperKey(Type type, string handlerName, Type handlerType, int? parametersCount,
+                Type[] typeParameters, bool callVirtIfNeeded) {
+                this.type = type;
+                this.handlerName = handlerName;
+                this.handlerType = handlerType;
+
+                this.parametersCount = parametersCount;
+                this.typeParameters = typeParameters;
+                this.callVirtIfNeeded = callVirtIfNeeded;
+                hasTypeParameters = typeParameters != null;
+                getHashCode = 0;
+                getHashCode = GetHashCodeInternal();
+            }
+
+            public static bool operator ==(HelperKey left, HelperKey right) {
+                return left.Equals(right);
+            }
+
+            public static bool operator !=(HelperKey left, HelperKey right) {
+                return !left.Equals(right);
+            }
+
+            private readonly Type type;
+            private readonly string handlerName;
+            private readonly Type handlerType;
+            private readonly int? parametersCount;
+            private readonly int getHashCode;
+            private readonly Type[] typeParameters;
+            private readonly bool hasTypeParameters;
+            private readonly bool callVirtIfNeeded;
+        }
+
+        #endregion
+    }
 }
