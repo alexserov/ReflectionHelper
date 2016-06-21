@@ -45,10 +45,17 @@ namespace DevExpress.Xpf.Core.Internal {
 
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> DefineProperty(
             Expression<Func<TWrapper, object>> expression) {
-            return
-                new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>(
-                    (expression.Body as MemberExpression).Member,
-                    this);
+            if (expression.Body is MemberExpression)
+                return
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>(
+                        (expression.Body as MemberExpression).Member,
+                        this);
+            if (expression.Body is UnaryExpression)
+                return
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>(
+                        ((expression.Body as UnaryExpression).Operand as MemberExpression).Member,
+                        this);
+            return null;
         }
 
         public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMethod(
@@ -343,7 +350,7 @@ namespace DevExpress.Xpf.Core.Internal {
                 return "get_" + result;
             if (kind == MemberInfoKind.PropertySetter && !result.StartsWith("set_"))
                 return "set_" + result;
-            return wrapperMethodInfo;
+            return result;
         }
 
         private BaseReflectionGeneratorInstanceSetting GetSetting(MemberInfo wrapperMethodInfo, bool createNew = false) {
