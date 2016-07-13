@@ -16,14 +16,21 @@ namespace DevExpress.Xpf.Core.Internal {
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
     }
 
-    public class ReflectionGeneratorInstance<TWrapper> : BaseReflectionGeneratorInstance {
+    public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
+        public ReflectionGeneratorInstanceWrapper(ModuleBuilder builder, object element) : base(builder, element, false) {}
+    }
+
+    public class ReflectionGeneratorStaticWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
+        public ReflectionGeneratorStaticWrapper(ModuleBuilder builder, object element) : base(builder, element, true) {}
+    }
+    public class ReflectionGeneratorWrapper<TWrapper> : BaseReflectionGeneratorInstance {
         private readonly object element;
         private readonly Type elementType;
         private readonly bool isStatic;
         private readonly ModuleBuilder moduleBuilder;
         private readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
 
-        public ReflectionGeneratorInstance(ModuleBuilder builder, object element, bool isStatic) {
+        public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) {
             if (isStatic) {
                 this.element = null;
                 elementType = (Type) element;
@@ -37,7 +44,7 @@ namespace DevExpress.Xpf.Core.Internal {
             settings = new Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting>();
         }
 
-        public ReflectionGeneratorInstance<TWrapper> DefaultBindingFlags(
+        public ReflectionGeneratorWrapper<TWrapper> DefaultBindingFlags(
             BindingFlags flags = BindingFlags.Instance | BindingFlags.Public) {
             defaultFlags = flags;
             return this;
@@ -371,6 +378,9 @@ namespace DevExpress.Xpf.Core.Internal {
         }        
     }
 
+    public class ReflectionGeneratorNonStaticInstance<TWrapper> {
+        //public void Create
+    }
     public static class ReflectionGenerator {
         private const string typesAssemblyName = "reflectiongeneratortypes";
         private const string typesModuleName = "reflectiongeneratormodule";
@@ -383,16 +393,16 @@ namespace DevExpress.Xpf.Core.Internal {
             moduleBuilder = assemblyBuilder.DefineDynamicModule(typesModuleName, typesAssemblyName + ".dll");
         }
 
-        public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TType, TWrapper>() {
+        public static ReflectionGeneratorWrapper<TWrapper> DefineWrapper<TType, TWrapper>() {
             return typeof(TType).DefineWrapper<TWrapper>();
         }
 
-        public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TWrapper>(this object element) {
-            return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element, false);
+        public static ReflectionGeneratorInstanceWrapper<TWrapper> DefineWrapper<TWrapper>(this object element) {
+            return new ReflectionGeneratorInstanceWrapper<TWrapper>(moduleBuilder, element);
         }
 
-        public static ReflectionGeneratorInstance<TWrapper> DefineWrapper<TWrapper>(this Type element) {
-            return new ReflectionGeneratorInstance<TWrapper>(moduleBuilder, element, true);
+        public static ReflectionGeneratorWrapper<TWrapper> DefineWrapper<TWrapper>(this Type element) {
+            return new ReflectionGeneratorStaticWrapper<TWrapper>(moduleBuilder, element);
         }
 
         public static TWrapper Wrap<TWrapper>(this object element) {

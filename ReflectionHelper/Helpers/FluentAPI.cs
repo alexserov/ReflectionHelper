@@ -5,16 +5,16 @@ namespace DevExpress.Xpf.Core.Internal {
     public class ReflectionGeneratorMemberInfoInstance<TWrapper> {
         internal readonly MemberInfo info;
         internal BindingFlags? flags;
-        internal ReflectionGeneratorInstance<TWrapper> root;
+        internal ReflectionGeneratorWrapper<TWrapper> root;
 
-        public ReflectionGeneratorMemberInfoInstance(MemberInfo info, ReflectionGeneratorInstance<TWrapper> root) {
+        public ReflectionGeneratorMemberInfoInstance(MemberInfo info, ReflectionGeneratorWrapper<TWrapper> root) {
             this.info = info;
             this.root = root;
         }
     }
 
     public static class ReflectionGeneratorMemberInfoInstanceExtensions {
-        public static ReflectionGeneratorInstance<TWrapper> EndMember<TWrapper>(
+        public static ReflectionGeneratorWrapper<TWrapper> EndMember<TWrapper>(
             this ReflectionGeneratorMemberInfoInstance<TWrapper> instance) {
             return instance.root;
         }
@@ -38,7 +38,7 @@ namespace DevExpress.Xpf.Core.Internal {
     }
 
     public static class ReflectionGeneratorPropertyMemberInfoInstanceExtensions {
-        public static ReflectionGeneratorInstance<TWrapper> EndMember<TWrapper>(
+        public static ReflectionGeneratorWrapper<TWrapper> EndMember<TWrapper>(
             this ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> instance) {
             return ReflectionGeneratorMemberInfoInstanceExtensions.EndMember(instance);
         }
@@ -82,7 +82,7 @@ namespace DevExpress.Xpf.Core.Internal {
 
     public class ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> :
         ReflectionGeneratorMemberInfoInstance<TWrapper> {
-        public ReflectionGeneratorPropertyMemberInfoInstance(MemberInfo info, ReflectionGeneratorInstance<TWrapper> root)
+        public ReflectionGeneratorPropertyMemberInfoInstance(MemberInfo info, ReflectionGeneratorWrapper<TWrapper> root)
             : base(info, root) {}
     }
 }
