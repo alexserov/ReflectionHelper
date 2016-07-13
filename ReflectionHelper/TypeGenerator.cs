@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -12,6 +13,23 @@ namespace ReflectionFramework.Internal {
         PropertySetter
     }
     public class BaseReflectionGeneratorInstance {
+        protected struct InstanceCacheKey {
+            private Type elementType;
+            private Type type;
+            private int v;
+
+            public InstanceCacheKey(Type elementType, Type type, int v) {
+                this.elementType = elementType;
+                this.type = type;
+                this.v = v;
+            }
+        }
+
+        protected static readonly Dictionary<InstanceCacheKey, Func<object, object>> CachedConstructors;
+
+        static BaseReflectionGeneratorInstance() {
+            CachedConstructors = new Dictionary<InstanceCacheKey, Func<object, object>>();
+        }
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
         protected internal Type tWrapper;
         protected BaseReflectionGeneratorInstance(Type tWrapper) {
@@ -19,15 +37,33 @@ namespace ReflectionFramework.Internal {
         }
     }
 
-    public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
+    public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {                
         public ReflectionGeneratorInstanceWrapper(ModuleBuilder builder, object element) : base(builder, element, false) {}
 
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
             return DefineProperty<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
         }
-
         public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
             return DefineMethod<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
+        }
+
+        public override TWrapper Create() {
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, typeof(TWrapper), GetSettingCode());
+            Func<object, object> result;
+            if (CachedConstructors.TryGetValue(icc, out result)) {
+                return (TWrapper)result(Element);
+            }
+            return base.Create();
+        }
+
+        protected override object CreateInstance(Type result, List<object> ctorArgs) {
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, typeof(TWrapper), GetSettingCode());
+            CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
+            return base.CreateInstance(result, ctorArgs);
+        }
+
+        Func<object, object> CreateConstructor(Type result, List<object> ctorArgs) {
+            return (x) => Activator.CreateInstance(result, new[] {x}.Concat(ctorArgs.Skip(1)).ToArray());
         }
     }
 
@@ -47,6 +83,9 @@ namespace ReflectionFramework.Internal {
         readonly bool isStatic;
         readonly ModuleBuilder moduleBuilder;
         readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
+
+        protected object Element { get { return element; } }
+        protected Type ElementType { get { return elementType; } }
 
         public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) : base(typeof(TWrapper)) {
             if (isStatic) {
@@ -89,7 +128,7 @@ namespace ReflectionFramework.Internal {
                 (TReflectionGeneratorWrapper)this);
         }
 
-        public TWrapper Create() {
+        public virtual TWrapper Create() {
             var typeBuilder = moduleBuilder.DefineType(typeof(TWrapper).Name + Guid.NewGuid(),
                 TypeAttributes.Public,
                 typeof(ReflectionGeneratedObject));
@@ -141,7 +180,11 @@ namespace ReflectionFramework.Internal {
             ctorIlGenerator.Emit(OpCodes.Ret);
 
             var result = typeBuilder.CreateType();
-            return (TWrapper) Activator.CreateInstance(result, ctorArgs.ToArray());
+            return (TWrapper) CreateInstance(result, ctorArgs);
+        }
+
+        protected  virtual object CreateInstance(Type result, List<object> ctorArgs) {
+            return Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
         static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, PropertyInfo propertyInfo, MethodInfo wrapperMethodInfo,
@@ -388,6 +431,16 @@ namespace ReflectionFramework.Internal {
                 return result;
             }
             return new NullReflectionGeneratorInstanceSetting(this);
+        }
+
+        protected int GetSettingCode() {
+            unchecked {
+                var result = 0;
+                foreach (var setting in settings.Values) {
+                    result = (result*397) ^ setting.ComputeKey();
+                }
+                return result;
+            }
         }
 
         internal void WriteSetting(MemberInfo info, Action<ReflectionGeneratorInstanceSetting> func) {

@@ -4,7 +4,7 @@ using System.Reflection;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
-    internal class BaseReflectionGeneratorInstanceSetting {
+    internal abstract class BaseReflectionGeneratorInstanceSetting {
         readonly BaseReflectionGeneratorInstance reflectionGeneratorInstance;
 
         public BaseReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) {
@@ -44,6 +44,8 @@ namespace ReflectionFramework {
         internal virtual Delegate GetFallback(MemberInfoKind kind) {
             return new Action(() => { });
         }
+
+        public abstract int ComputeKey();
     }
 
     internal class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
@@ -86,9 +88,24 @@ namespace ReflectionFramework {
             }
             return result ?? base.GetFallback(infoKind);
         }
+
+        public override int ComputeKey() {
+            unchecked {
+                var hashCode = BindingFlags.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Name != null ? Name.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ IsField.GetHashCode();
+                hashCode = (hashCode * 397) ^ (FallbackAction != null ? FallbackAction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (GetterFallbackAction != null ? GetterFallbackAction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (SetterFallbackAction != null ? SetterFallbackAction.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 
     internal class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public NullReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) : base(reflectionGeneratorInstance) {}
+        public override int ComputeKey() {
+            return 0;
+        }
     }
 }
