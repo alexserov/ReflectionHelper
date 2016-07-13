@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="_AttributesTests.cs" />
     <Compile Include="_StaticTests.cs" />
     <Compile Include="_FallbackTests.cs" />
     <Compile Include="_FluentAPITests.cs" />

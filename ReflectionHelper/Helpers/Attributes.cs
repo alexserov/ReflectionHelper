@@ -6,9 +6,10 @@ namespace ReflectionFramework {
         [AttributeUsage(AttributeTargets.Property)]
         public class FieldAccessorAttribute : Attribute {}
 
-        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Interface)]
         public class BindingFlagsAttribute : Attribute {
             readonly BindingFlags flags;
+            public BindingFlags Flags { get { return flags; } }
 
             public BindingFlagsAttribute(BindingFlags flags) {
                 this.flags = flags;
@@ -18,18 +19,10 @@ namespace ReflectionFramework {
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
         public class NameAttribute : Attribute {
             readonly string name;
-
+            public string Name { get { return name; } }
             public NameAttribute(string name) {
                 this.name = name;
             }
-        }
-        //[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
-        //public class WrapResultAttribute : Attribute {
-        //    private readonly Type tInterface;
-
-        //    public WrapResultAttribute(Type tInterface) {
-        //        this.tInterface = tInterface;
-        //    }
-        //}
+        }        
     }
 }

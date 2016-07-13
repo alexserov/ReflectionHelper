@@ -13,6 +13,10 @@ namespace ReflectionFramework.Internal {
     }
     public class BaseReflectionGeneratorInstance {
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
+        protected internal Type tWrapper;
+        protected BaseReflectionGeneratorInstance(Type tWrapper) {
+            this.tWrapper = tWrapper;
+        }
     }
 
     public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
@@ -44,7 +48,7 @@ namespace ReflectionFramework.Internal {
         readonly ModuleBuilder moduleBuilder;
         readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
 
-        public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) {
+        public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) : base(typeof(TWrapper)) {
             if (isStatic) {
                 this.element = null;
                 elementType = (Type) element;
@@ -101,27 +105,27 @@ namespace ReflectionFramework.Internal {
             foreach (var wrapperMethodInfo in typeof(TWrapper).GetMethods()) {
                 if (wrapperMethodInfo.IsSpecialName)
                     continue;
-                DefineMethod(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, sourceType,
+                DefineMethod(typeBuilder, wrapperMethodInfo, null, ctorInfos, ctorArgs, sourceType,
                     sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method, isStatic);
             }
             foreach (var propertyInfo in typeof(TWrapper).GetProperties()) {
                 var setting = GetSetting(propertyInfo);
-                var field = setting.FieldAccessor();
+                var field = setting.FieldAccessor(propertyInfo);
                 var getMethod = propertyInfo.GetGetMethod(true);
                 var setMethod = propertyInfo.GetSetMethod(true);
                 if (getMethod != null)
                     if (field)
-                        DefineFieldGetterOrSetter(typeBuilder, getMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo, getMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
                     else
-                        DefineMethod(typeBuilder, getMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineMethod(typeBuilder, getMethod, propertyInfo, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertyGetter, isStatic);
                 if (setMethod != null)
                     if (field)
-                        DefineFieldGetterOrSetter(typeBuilder, setMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineFieldGetterOrSetter(typeBuilder, propertyInfo, setMethod, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
                     else
-                        DefineMethod(typeBuilder, setMethod, ctorInfos, ctorArgs, sourceType,
+                        DefineMethod(typeBuilder, setMethod, propertyInfo, ctorInfos, ctorArgs, sourceType,
                             sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
             }
             var ctor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
@@ -140,13 +144,13 @@ namespace ReflectionFramework.Internal {
             return (TWrapper) Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
-        static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, PropertyInfo propertyInfo, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
             var sourceFieldInfo =
-                sourceType.GetField(GetTargetName(wrapperMethodInfo.Name.Remove(0, 4), setting, MemberInfoKind.Method),
-                    setting.GetBindingFlags() | (isStatic ? BindingFlags.Static : 0));
+                sourceType.GetField(GetTargetName(propertyInfo.Name, setting, MemberInfoKind.Method, propertyInfo),
+                    setting.GetBindingFlags(wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0));
             FieldBuilder fieldInfo = null;
             if (sourceFieldInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceFieldInfo.GetType(),
@@ -198,12 +202,12 @@ namespace ReflectionFramework.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
 
-        static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, MemberInfo baseMemberInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
-            var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo.Name, setting, method),
-                setting.GetBindingFlags() | (isStatic ? BindingFlags.Static : 0));
+            var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo.Name, setting, method, baseMemberInfo ?? wrapperMethodInfo),
+                setting.GetBindingFlags(baseMemberInfo ?? wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0));
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceMethodInfo.GetType(),
@@ -365,8 +369,8 @@ namespace ReflectionFramework.Internal {
         }
 
         static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
-            MemberInfoKind kind) {
-            var result = setting.GetName(wrapperMethodInfo);
+            MemberInfoKind kind, MemberInfo memberInfo) {
+            var result = setting.GetName(wrapperMethodInfo, memberInfo);
             if (kind == MemberInfoKind.PropertyGetter && !result.StartsWith("get_"))
                 return "get_" + result;
             if (kind == MemberInfoKind.PropertySetter && !result.StartsWith("set_"))
