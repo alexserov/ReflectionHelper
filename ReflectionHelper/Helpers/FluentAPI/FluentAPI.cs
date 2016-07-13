@@ -1,18 +1,8 @@
 using System;
 using System.Reflection;
+using ReflectionFramework.Internal;
 
-namespace DevExpress.Xpf.Core.Internal {
-    public class ReflectionGeneratorMemberInfoInstance<TWrapper> {
-        internal readonly MemberInfo info;
-        internal BindingFlags? flags;
-        internal ReflectionGeneratorWrapper<TWrapper> root;
-
-        public ReflectionGeneratorMemberInfoInstance(MemberInfo info, ReflectionGeneratorWrapper<TWrapper> root) {
-            this.info = info;
-            this.root = root;
-        }
-    }
-
+namespace ReflectionFramework {    
     public static class ReflectionGeneratorMemberInfoInstanceExtensions {
         public static ReflectionGeneratorWrapper<TWrapper> EndMember<TWrapper>(
             this ReflectionGeneratorMemberInfoInstance<TWrapper> instance) {
@@ -78,11 +68,5 @@ namespace DevExpress.Xpf.Core.Internal {
             instance.root.WriteSetting(instance.info, x => x.SetterFallbackAction = fallbackAction);
             return instance;
         }
-    }
-
-    public class ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> :
-        ReflectionGeneratorMemberInfoInstance<TWrapper> {
-        public ReflectionGeneratorPropertyMemberInfoInstance(MemberInfo info, ReflectionGeneratorWrapper<TWrapper> root)
-            : base(info, root) {}
-    }
+    }    
 }

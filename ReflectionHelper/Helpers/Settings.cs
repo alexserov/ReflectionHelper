@@ -1,8 +1,9 @@
 using System;
 using System.Reflection;
+using ReflectionFramework.Internal;
 
-namespace DevExpress.Xpf.Core.Internal {
-    public class BaseReflectionGeneratorInstanceSetting {
+namespace ReflectionFramework {
+    class BaseReflectionGeneratorInstanceSetting {
         private readonly BaseReflectionGeneratorInstance reflectionGeneratorInstance;
 
         public BaseReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) {
@@ -26,7 +27,7 @@ namespace DevExpress.Xpf.Core.Internal {
         }
     }
 
-    public class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
+    class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public ReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
             : base(reflectionGeneratorInstance) {}
 
@@ -68,7 +69,7 @@ namespace DevExpress.Xpf.Core.Internal {
         }
     }
 
-    public class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
+    class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public NullReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) : base(reflectionGeneratorInstance) {}
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace DevExpress.Xpf.Core.Internal {
+namespace ReflectionFramework {
     public static class ReflectionHelperAttributes {
         [AttributeUsage(AttributeTargets.Property)]
         public class FieldAccessorAttribute : Attribute {}

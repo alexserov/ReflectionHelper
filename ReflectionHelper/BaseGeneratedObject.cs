@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace DevExpress.Xpf.Core.Internal {
+namespace ReflectionFramework.Internal {
     public class ReflectionGeneratedObject {
         const int CallsToCleanup = 100;
         class WeakReference<T> where T : class {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace DevExpress.Xpf.Core.Internal {
+namespace ReflectionFramework {
     public partial class ReflectionHelper {
         public ReflectionHelper() {
             InvokeInfo = new Dictionary<HelperKey, object>();

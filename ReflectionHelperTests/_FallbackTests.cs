@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using DevExpress.Xpf.Core.Internal;
+using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {

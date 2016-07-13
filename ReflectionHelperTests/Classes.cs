@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using DevExpress.Xpf.Core.Internal;
+using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
@@ -8,5 +8,9 @@ namespace ReflectionHelperTests {
         Collapsed,
         Visible,
         Hidden
-    }        
+    }
+
+    public class Fakes {
+        public Fakes() { }
+    }
 }
