@@ -3,8 +3,8 @@ using System.Reflection;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
-    class BaseReflectionGeneratorInstanceSetting {
-        private readonly BaseReflectionGeneratorInstance reflectionGeneratorInstance;
+    internal class BaseReflectionGeneratorInstanceSetting {
+        readonly BaseReflectionGeneratorInstance reflectionGeneratorInstance;
 
         public BaseReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) {
             this.reflectionGeneratorInstance = reflectionGeneratorInstance;
@@ -27,7 +27,7 @@ namespace ReflectionFramework {
         }
     }
 
-    class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
+    internal class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public ReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
             : base(reflectionGeneratorInstance) {}
 
@@ -69,7 +69,7 @@ namespace ReflectionFramework {
         }
     }
 
-    class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
+    internal class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
         public NullReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) : base(reflectionGeneratorInstance) {}
     }
 }

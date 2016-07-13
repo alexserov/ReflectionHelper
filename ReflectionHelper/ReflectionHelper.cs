@@ -11,20 +11,20 @@ namespace ReflectionFramework {
             PropertyTypeInfo = new Dictionary<HelperKey, Type>();
         }
 
-        private Dictionary<HelperKey, object> InvokeInfo { get; }
-        private Dictionary<HelperKey, Type> PropertyTypeInfo { get; }
+        Dictionary<HelperKey, object> InvokeInfo { get; }
+        Dictionary<HelperKey, Type> PropertyTypeInfo { get; }
 
         public bool HasContent {
             get { return InvokeInfo.Count > 0; }
         }
 
-        private Func<object, object> CreateGetter(PropertyInfo info) {
+        Func<object, object> CreateGetter(PropertyInfo info) {
             return
                 (Func<object, object>)
                     CreateMethodHandlerImpl(info.GetGetMethod(true), null, typeof(Func<object, object>), true);
         }
 
-        private Action<object, object> CreateSetter(PropertyInfo info) {
+        Action<object, object> CreateSetter(PropertyInfo info) {
             if (!info.CanWrite)
                 throw new NotSupportedException("no setter");
             return
@@ -32,7 +32,7 @@ namespace ReflectionFramework {
                     CreateMethodHandlerImpl(info.GetSetMethod(true), null, typeof(Action<object, object>), true);
         }
 
-        private static object CreateMethodHandlerImpl(object instance, string methodName, BindingFlags bindingFlags,
+        static object CreateMethodHandlerImpl(object instance, string methodName, BindingFlags bindingFlags,
             Type instanceType, Type delegateType, int? parametersCount, Type[] typeParameters, bool callVirtIfNeeded) {
             MethodInfo mi = null;
             if (instance != null)
@@ -41,7 +41,7 @@ namespace ReflectionFramework {
             return CreateMethodHandlerImpl(mi, instanceType, delegateType, callVirtIfNeeded);
         }
 
-        private static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags,
+        static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags,
             int? parametersCount = null,
             Type[] typeParameters = null) {
             if (parametersCount != null) {
@@ -197,7 +197,7 @@ namespace ReflectionFramework {
             return dm.CreateDelegate(delegateType);
         }
 
-        private static Type GetElementTypeIfNeeded(Type x) {
+        static Type GetElementTypeIfNeeded(Type x) {
             if (x.IsByRef)
                 return x.GetElementType();
             return x;
@@ -260,7 +260,7 @@ namespace ReflectionFramework {
             return resultType.MakeGenericType(lst.ToArray());
         }
 
-        private static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType,
+        static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType,
             Type declaringType,
             string fieldName, BindingFlags bFlags) {
             var fieldInfo = declaringType.GetField(fieldName, bFlags);
@@ -299,7 +299,7 @@ namespace ReflectionFramework {
 
         #region inner classes
 
-        private struct HelperKey {
+        struct HelperKey {
             public bool Equals(HelperKey other) {
                 var simpleattr = type == other.type
                                  && string.Equals(handlerName, other.handlerName)
@@ -330,7 +330,7 @@ namespace ReflectionFramework {
                 return getHashCode;
             }
 
-            private int GetHashCodeInternal() {
+            int GetHashCodeInternal() {
                 unchecked {
                     var hashCode = type != null ? type.GetHashCode() : 0;
                     hashCode = (hashCode*397) ^ (handlerName != null ? handlerName.GetHashCode() : 0);
@@ -366,14 +366,14 @@ namespace ReflectionFramework {
                 return !left.Equals(right);
             }
 
-            private readonly Type type;
-            private readonly string handlerName;
-            private readonly Type handlerType;
-            private readonly int? parametersCount;
-            private readonly int getHashCode;
-            private readonly Type[] typeParameters;
-            private readonly bool hasTypeParameters;
-            private readonly bool callVirtIfNeeded;
+            readonly Type type;
+            readonly string handlerName;
+            readonly Type handlerType;
+            readonly int? parametersCount;
+            readonly int getHashCode;
+            readonly Type[] typeParameters;
+            readonly bool hasTypeParameters;
+            readonly bool callVirtIfNeeded;
         }
 
         #endregion

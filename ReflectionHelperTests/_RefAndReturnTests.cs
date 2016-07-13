@@ -7,7 +7,7 @@ using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class Class3 {
+    internal class Class3 {
         public string StringString(ref string value) {
             value = "def";
             return "abc";

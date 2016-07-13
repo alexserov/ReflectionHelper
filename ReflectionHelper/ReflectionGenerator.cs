@@ -6,10 +6,10 @@ using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
     public static class ReflectionGenerator {
-        private const string typesAssemblyName = "reflectiongeneratortypes";
-        private const string typesModuleName = "reflectiongeneratormodule";
+        const string typesAssemblyName = "reflectiongeneratortypes";
+        const string typesModuleName = "reflectiongeneratormodule";
         internal static ModuleBuilder moduleBuilder;
-        private static readonly AssemblyBuilder assemblyBuilder;
+        static readonly AssemblyBuilder assemblyBuilder;
 
         static ReflectionGenerator() {
             var asmName = new AssemblyName(typesAssemblyName);
@@ -17,7 +17,7 @@ namespace ReflectionFramework {
             moduleBuilder = assemblyBuilder.DefineDynamicModule(typesModuleName, typesAssemblyName + ".dll");
         }
 
-        public static ReflectionGeneratorWrapper<TWrapper> DefineWrapper<TType, TWrapper>() {
+        public static ReflectionGeneratorStaticWrapper<TWrapper> DefineWrapper<TType, TWrapper>() {
             return typeof(TType).DefineWrapper<TWrapper>();
         }
 
@@ -25,7 +25,7 @@ namespace ReflectionFramework {
             return new ReflectionGeneratorInstanceWrapper<TWrapper>(moduleBuilder, element);
         }
 
-        public static ReflectionGeneratorWrapper<TWrapper> DefineWrapper<TWrapper>(this Type element) {
+        public static ReflectionGeneratorStaticWrapper<TWrapper> DefineWrapper<TWrapper>(this Type element) {
             return new ReflectionGeneratorStaticWrapper<TWrapper>(moduleBuilder, element);
         }
 

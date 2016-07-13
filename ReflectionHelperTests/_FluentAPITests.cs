@@ -9,8 +9,8 @@ using NUnit.Framework.Internal;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class FulentAPITestObject {
-        private string stringField;
+    internal class FulentAPITestObject {
+        string stringField;
         public string PublicStringProperty { get; set; }
         public string PrivateStringProperty { get; set; }
 

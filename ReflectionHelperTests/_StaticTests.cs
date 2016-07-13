@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace ReflectionHelperTests {
     internal class StaticFulentAPITestObject {
-        private static string stringField;
+        static string stringField;
         public static string PublicStringProperty { get; set; }
         public static string PrivateStringProperty { get; set; }
 
@@ -12,7 +12,7 @@ namespace ReflectionHelperTests {
             return value;
         }
 
-        private static string PrivateMethod(string value) {
+        static string PrivateMethod(string value) {
             return value;
         }
     }

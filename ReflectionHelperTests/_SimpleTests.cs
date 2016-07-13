@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace ReflectionHelperTests {
     public class Class1 {
-        private string publicStringProperty;
+        string publicStringProperty;
         public string LastMethod { get; set; }
 
         public string PublicStringProperty {
@@ -39,7 +39,7 @@ namespace ReflectionHelperTests {
     }
     
     [TestFixture]
-    class Tests {
+    internal class Tests {
        
         [Test]
         public void PublicVoidMethodTest() {

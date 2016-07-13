@@ -11,6 +11,6 @@ namespace ReflectionHelperTests {
     }
 
     public class Fakes {
-        public Fakes() { }
+        //public Fakes() { ReflectionFramework.ReflectionGenerator }
     }
 }

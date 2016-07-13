@@ -17,17 +17,32 @@ namespace ReflectionFramework.Internal {
 
     public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
         public ReflectionGeneratorInstanceWrapper(ModuleBuilder builder, object element) : base(builder, element, false) {}
+
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
+            return DefineProperty<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
+        }
+
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
+            return DefineMethod<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
+        }
     }
 
     public class ReflectionGeneratorStaticWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
         public ReflectionGeneratorStaticWrapper(ModuleBuilder builder, object element) : base(builder, element, true) {}
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
+            return DefineProperty<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
+        }
+
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
+            return DefineMethod<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
+        }
     }
     public class ReflectionGeneratorWrapper<TWrapper> : BaseReflectionGeneratorInstance {
-        private readonly object element;
-        private readonly Type elementType;
-        private readonly bool isStatic;
-        private readonly ModuleBuilder moduleBuilder;
-        private readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
+        readonly object element;
+        readonly Type elementType;
+        readonly bool isStatic;
+        readonly ModuleBuilder moduleBuilder;
+        readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
 
         public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) {
             if (isStatic) {
@@ -49,25 +64,25 @@ namespace ReflectionFramework.Internal {
             return this;
         }
 
-        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper> DefineProperty(
-            Expression<Func<TWrapper, object>> expression) {
+        protected ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineProperty<TReflectionGeneratorWrapper>(
+            Expression<Func<TWrapper, object>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
             if (expression.Body is MemberExpression)
                 return
-                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>(
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
                         (expression.Body as MemberExpression).Member,
-                        this);
+                        (TReflectionGeneratorWrapper)this);
             if (expression.Body is UnaryExpression)
                 return
-                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper>(
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
                         ((expression.Body as UnaryExpression).Operand as MemberExpression).Member,
-                        this);
+                        (TReflectionGeneratorWrapper)this);
             return null;
         }
 
-        public ReflectionGeneratorMemberInfoInstance<TWrapper> DefineMethod(
-            Expression<Action<TWrapper>> expression) {
-            return new ReflectionGeneratorMemberInfoInstance<TWrapper>((expression.Body as MethodCallExpression).Method,
-                this);
+        protected ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineMethod<TReflectionGeneratorWrapper>(
+            Expression<Action<TWrapper>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
+            return new ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>((expression.Body as MethodCallExpression).Method,
+                (TReflectionGeneratorWrapper)this);
         }
 
         public TWrapper Create() {
@@ -125,7 +140,7 @@ namespace ReflectionFramework.Internal {
             return (TWrapper) Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
-        private static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
@@ -183,7 +198,7 @@ namespace ReflectionFramework.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
 
-        private static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
@@ -265,7 +280,7 @@ namespace ReflectionFramework.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
         }
 
-        private static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
+        static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos, List<object> ctorArgs,
             BaseReflectionGeneratorInstanceSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind) {
             var fallback = setting.GetFallback(infoKind);
@@ -278,7 +293,7 @@ namespace ReflectionFramework.Internal {
         }
 
 
-        private static void SyncTupleItems(IEnumerable<Tuple<int, Type>> tuples, Type returnType, bool skipFirst,
+        static void SyncTupleItems(IEnumerable<Tuple<int, Type>> tuples, Type returnType, bool skipFirst,
             ILGenerator ilGenerator) {
             var index = skipFirst ? 1 : 0;
             ilGenerator.Emit(OpCodes.Stloc_0);
@@ -345,11 +360,11 @@ namespace ReflectionFramework.Internal {
             generator.Emit(opCode);
         }
 
-        private static MethodInfo GetTupleItem(Type type, int i) {
+        static MethodInfo GetTupleItem(Type type, int i) {
             return type.GetMethod($"get_Item{i + 1}");
         }
 
-        private static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
+        static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
             MemberInfoKind kind) {
             var result = setting.GetName(wrapperMethodInfo);
             if (kind == MemberInfoKind.PropertyGetter && !result.StartsWith("get_"))
@@ -359,7 +374,7 @@ namespace ReflectionFramework.Internal {
             return result;
         }
 
-        private BaseReflectionGeneratorInstanceSetting GetSetting(MemberInfo wrapperMethodInfo, bool createNew = false) {
+        BaseReflectionGeneratorInstanceSetting GetSetting(MemberInfo wrapperMethodInfo, bool createNew = false) {
             ReflectionGeneratorInstanceSetting result;
             if (settings.TryGetValue(wrapperMethodInfo, out result))
                 return result;
@@ -375,9 +390,5 @@ namespace ReflectionFramework.Internal {
             var setting = (ReflectionGeneratorInstanceSetting) GetSetting(info, true);
             func(setting);
         }        
-    }
-
-    public class ReflectionGeneratorNonStaticInstance<TWrapper> {
-        //public void Create
-    }
+    }    
 }

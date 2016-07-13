@@ -43,7 +43,6 @@
   <ItemGroup>
     <Compile Include="BaseGeneratedObject.cs" />
     <Compile Include="Helpers\Attributes.cs" />
-    <Compile Include="Helpers\FluentAPI\FluentAPI.cs" />
     <Compile Include="Helpers\FluentAPI\Internal.cs" />
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

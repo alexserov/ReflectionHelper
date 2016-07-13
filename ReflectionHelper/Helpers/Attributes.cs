@@ -8,7 +8,7 @@ namespace ReflectionFramework {
 
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
         public class BindingFlagsAttribute : Attribute {
-            private readonly BindingFlags flags;
+            readonly BindingFlags flags;
 
             public BindingFlagsAttribute(BindingFlags flags) {
                 this.flags = flags;
@@ -17,7 +17,7 @@ namespace ReflectionFramework {
 
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
         public class NameAttribute : Attribute {
-            private readonly string name;
+            readonly string name;
 
             public NameAttribute(string name) {
                 this.name = name;

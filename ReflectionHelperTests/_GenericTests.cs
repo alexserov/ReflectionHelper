@@ -7,7 +7,7 @@ using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class Class6 {
+    internal class Class6 {
         public Type GenericMethod<TArgument>() {
             return typeof(TArgument);
         }

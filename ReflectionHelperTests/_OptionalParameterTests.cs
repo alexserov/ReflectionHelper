@@ -7,7 +7,7 @@ using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class Class5 {
+    internal class Class5 {
         public string String { get; set; }
         public void OptionalParamsMethod1(string str = "hello") {
             String = str;

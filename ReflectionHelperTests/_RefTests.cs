@@ -7,7 +7,7 @@ using ReflectionFramework;
 using NUnit.Framework;
 
 namespace ReflectionHelperTests {
-    class Class2 {
+    internal class Class2 {
         public void _Boolean(ref Boolean value) {
             value = true;
         }
