@@ -57,6 +57,7 @@
     <Compile Include="_RefTests.cs" />
     <Compile Include="_SimpleTests.cs" />
     <Compile Include="Classes.cs" />
+    <Compile Include="_WrapperTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

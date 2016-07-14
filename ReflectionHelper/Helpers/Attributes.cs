@@ -37,8 +37,20 @@ namespace ReflectionFramework {
 
             public InterfaceMemberAttribute(Type interfacType) : this(interfacType.FullName) {}
         }
-        [Obsolete("Not implemented yet")]
+
         [AttributeUsage(AttributeTargets.Interface)]
         public class WrapperAttribute : Attribute { }
+        [AttributeUsage(AttributeTargets.Interface, AllowMultiple = true)]
+        public class AssignableFromAttribute : Attribute {
+            public Type Type { get; private set; }
+            public string TypeName { get; private set; }
+            public bool Inverse { get; set; }
+            public AssignableFromAttribute(Type type) {
+                Type = type;
+            }
+            public AssignableFromAttribute(string typeName) {
+                TypeName = typeName;
+            }
+        }
     }
 }

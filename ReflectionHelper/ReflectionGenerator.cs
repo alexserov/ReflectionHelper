@@ -8,7 +8,7 @@ namespace ReflectionFramework {
     public static class ReflectionGenerator {
         const string typesAssemblyName = "reflectiongeneratortypes";
         const string typesModuleName = "reflectiongeneratormodule";
-        internal static ModuleBuilder moduleBuilder;
+        static ModuleBuilder moduleBuilder;
         static readonly AssemblyBuilder assemblyBuilder;
 
         static ReflectionGenerator() {
@@ -43,6 +43,10 @@ namespace ReflectionFramework {
 
         public static void Save() {
             assemblyBuilder.Save($"myasm{DateTime.Now.Minute}.dll");
+        }
+
+        internal static object Wrap(object element, Type wrapperType) {
+            return new BaseReflectionGeneratorInstance(moduleBuilder, element, false, wrapperType).CreateInternal();
         }
     }
 }

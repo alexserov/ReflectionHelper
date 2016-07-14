@@ -146,6 +146,8 @@ namespace ReflectionFramework.Internal {
         public static readonly MethodInfo GetGenericDelegateMethodInfo;
         public static readonly MethodInfo GetFieldGetterMethodInfo;
         public static readonly MethodInfo GetFieldSetterMethodInfo;
+        public static readonly MethodInfo WrapMethodInfo;
+        public static readonly MethodInfo UnwrapMethodInfo;
         static readonly Dictionary<LocalFieldCacheKey, WeakReference<Delegate>> globalFieldGetterCache;
         static readonly Dictionary<LocalFieldCacheKey, WeakReference<Delegate>> globalFieldSetterCache;
         static readonly Dictionary<LocalGenericDelegateCacheKey, WeakReference<Delegate>> globalGenericDelegateCache;
@@ -160,6 +162,8 @@ namespace ReflectionFramework.Internal {
             GetGenericDelegateMethodInfo = GetMethodInfo(x => x.GetGenericDelegate(null, null, null, false, null));
             GetFieldGetterMethodInfo = GetMethodInfo(x => x.GetFieldGetter(null, null, null, null, false));
             GetFieldSetterMethodInfo = GetMethodInfo(x => x.GetFieldSetter(null, null, null, null, false));
+            WrapMethodInfo = GetMethodInfo(x => x.Wrap(null, null));
+            UnwrapMethodInfo = GetMethodInfo(x => x.Unwrap(null));
         }
 
         readonly Dictionary<LocalFieldCacheKey, Delegate> localFieldGetterCache;
@@ -167,11 +171,17 @@ namespace ReflectionFramework.Internal {
         readonly Dictionary<LocalGenericDelegateCacheKey, Delegate> localGenericDelegateCache;
         readonly Dictionary<LocalDelegateCacheKey, Delegate> localDelegateCache;
 
+        object source;
+
         public ReflectionGeneratedObject() {
             localFieldGetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
             localFieldSetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
             localGenericDelegateCache = new Dictionary<LocalGenericDelegateCacheKey, Delegate>();
             localDelegateCache = new Dictionary<LocalDelegateCacheKey, Delegate>();
+        }
+
+        public ReflectionGeneratedObject(object source) : this() {
+            this.source = source;
         }
 
         static MethodInfo GetMethodInfo(Expression<Action<ReflectionGeneratedObject>> expr) {
@@ -183,13 +193,14 @@ namespace ReflectionFramework.Internal {
             if (localCache.TryGetValue(key, out result)) {
                 return true;
             }
-            WeakReference<Delegate> globalResult;                
+            WeakReference<Delegate> globalResult;
             if (globalCache.TryGetValue(key, out globalResult)) {
+                result = globalResult.Target;
                 if (!globalResult.IsAlive) {
                     globalCache.Remove(key);
                     return false;
-                }                    
-                localCache[key] = globalResult.Target;
+                }
+                localCache[key] = result;
                 CheckCleanup();
                 return true;
             }
@@ -279,6 +290,13 @@ namespace ReflectionFramework.Internal {
 
         Delegate CreateDelegate(MethodInfo info, Type instanceType, Type delegateType, bool useTuple) {
             return (Delegate) ReflectionHelper.CreateMethodHandlerImpl(info, instanceType, delegateType, true, useTuple);
+        }
+
+        public object Wrap(Type wrapperType, object obj) {
+            return ReflectionGenerator.Wrap(obj, wrapperType);
+        }
+        public object Unwrap(ReflectionGeneratedObject wrapper) {
+            return wrapper.source;
         }
     }
 }

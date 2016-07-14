@@ -13,6 +13,14 @@ namespace ReflectionFramework.Internal {
         PropertySetter
     }
     public class BaseReflectionGeneratorInstance {
+        readonly object element;
+        readonly Type elementType;
+        readonly bool isStatic;
+        readonly ModuleBuilder moduleBuilder;
+        readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
+
+        protected object Element { get { return element; } }
+        protected Type ElementType { get { return elementType; } }
         protected struct InstanceCacheKey {
             private Type elementType;
             private Type type;
@@ -32,67 +40,12 @@ namespace ReflectionFramework.Internal {
         }
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
         protected internal Type tWrapper;
-        protected BaseReflectionGeneratorInstance(Type tWrapper) {
+        protected internal BaseReflectionGeneratorInstance(ModuleBuilder builder, object element, bool isStatic, Type tWrapper) {
             this.tWrapper = tWrapper;
-        }
-    }
-
-    public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {                
-        public ReflectionGeneratorInstanceWrapper(ModuleBuilder builder, object element) : base(builder, element, false) {}
-
-        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
-            return DefineProperty<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
-        }
-        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
-            return DefineMethod<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
-        }
-
-        public override TWrapper Create() {
-            InstanceCacheKey icc = new InstanceCacheKey(ElementType, typeof(TWrapper), GetSettingCode());
-            Func<object, object> result;
-            if (CachedConstructors.TryGetValue(icc, out result)) {
-                return (TWrapper)result(Element);
-            }
-            return base.Create();
-        }
-
-        protected override object CreateInstance(Type result, List<object> ctorArgs) {
-            InstanceCacheKey icc = new InstanceCacheKey(ElementType, typeof(TWrapper), GetSettingCode());
-            CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
-            return base.CreateInstance(result, ctorArgs);
-        }
-
-        Func<object, object> CreateConstructor(Type result, List<object> ctorArgs) {
-            return (x) => Activator.CreateInstance(result, new[] {x}.Concat(ctorArgs.Skip(1)).ToArray());
-        }
-    }
-
-    public class ReflectionGeneratorStaticWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
-        public ReflectionGeneratorStaticWrapper(ModuleBuilder builder, object element) : base(builder, element, true) {}
-        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
-            return DefineProperty<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
-        }
-
-        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
-            return DefineMethod<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
-        }
-    }
-    public class ReflectionGeneratorWrapper<TWrapper> : BaseReflectionGeneratorInstance {
-        readonly object element;
-        readonly Type elementType;
-        readonly bool isStatic;
-        readonly ModuleBuilder moduleBuilder;
-        readonly Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting> settings;
-
-        protected object Element { get { return element; } }
-        protected Type ElementType { get { return elementType; } }
-
-        public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) : base(typeof(TWrapper)) {
             if (isStatic) {
                 this.element = null;
-                elementType = (Type) element;
-            }
-            else {
+                elementType = (Type)element;
+            } else {
                 this.element = element;
                 elementType = this.element?.GetType();
             }
@@ -101,39 +54,22 @@ namespace ReflectionFramework.Internal {
             settings = new Dictionary<MemberInfo, ReflectionGeneratorInstanceSetting>();
         }
 
-        public ReflectionGeneratorWrapper<TWrapper> DefaultBindingFlags(
-            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public) {
-            defaultFlags = flags;
-            return this;
+        internal object CreateInternal() {
+            return CreateImpl();
+        }
+        protected virtual object CreateOverride() {
+            return CreateImpl();
+        }
+        protected virtual object CreateInstanceOverride(Type result, List<object> ctorArgs) {
+            return CreateInstance(result, ctorArgs);
         }
 
-        protected ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineProperty<TReflectionGeneratorWrapper>(
-            Expression<Func<TWrapper, object>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
-            if (expression.Body is MemberExpression)
-                return
-                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
-                        (expression.Body as MemberExpression).Member,
-                        (TReflectionGeneratorWrapper)this);
-            if (expression.Body is UnaryExpression)
-                return
-                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
-                        ((expression.Body as UnaryExpression).Operand as MemberExpression).Member,
-                        (TReflectionGeneratorWrapper)this);
-            return null;
-        }
-
-        protected ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineMethod<TReflectionGeneratorWrapper>(
-            Expression<Action<TWrapper>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
-            return new ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>((expression.Body as MethodCallExpression).Method,
-                (TReflectionGeneratorWrapper)this);
-        }
-
-        public virtual TWrapper Create() {
-            var typeBuilder = moduleBuilder.DefineType(typeof(TWrapper).Name + Guid.NewGuid(),
+        protected object CreateImpl() {
+            var typeBuilder = moduleBuilder.DefineType(tWrapper.Name + Guid.NewGuid(),
                 TypeAttributes.Public,
                 typeof(ReflectionGeneratedObject));
 
-            typeBuilder.AddInterfaceImplementation(typeof(TWrapper));
+            typeBuilder.AddInterfaceImplementation(tWrapper);
             var sourceType = elementType;
             var ctorArgs = new List<object>();
             var ctorInfos = new List<FieldInfo>();
@@ -141,13 +77,13 @@ namespace ReflectionFramework.Internal {
             ctorInfos.Add(sourceObjectField);
             ctorArgs.Add(element);
 
-            foreach (var wrapperMethodInfo in typeof(TWrapper).GetMethods()) {
+            foreach (var wrapperMethodInfo in tWrapper.GetMethods()) {
                 if (wrapperMethodInfo.IsSpecialName)
                     continue;
                 DefineMethod(typeBuilder, wrapperMethodInfo, null, ctorInfos, ctorArgs, sourceType,
                     sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method, isStatic);
             }
-            foreach (var propertyInfo in typeof(TWrapper).GetProperties()) {
+            foreach (var propertyInfo in tWrapper.GetProperties()) {
                 var setting = GetSetting(propertyInfo);
                 var field = setting.FieldAccessor(propertyInfo);
                 var getMethod = propertyInfo.GetGetMethod(true);
@@ -171,7 +107,8 @@ namespace ReflectionFramework.Internal {
                 ctorInfos.Select(x => x.FieldType).ToArray());
             var ctorIlGenerator = ctor.GetILGenerator();
             ctorIlGenerator.Emit(OpCodes.Ldarg_0);
-            ctorIlGenerator.Emit(OpCodes.Call, typeof(ReflectionGeneratedObject).GetConstructor(Type.EmptyTypes));
+            ctorIlGenerator.Emit(OpCodes.Ldarg_1);
+            ctorIlGenerator.Emit(OpCodes.Call, typeof(ReflectionGeneratedObject).GetConstructor(new Type[] {typeof(object)}));
             for (byte i = 0; i < ctorArgs.Count; i++) {
                 ctorIlGenerator.Emit(OpCodes.Ldarg_0);
                 ctorIlGenerator.Emit(OpCodes.Ldarg, i + 1);
@@ -180,14 +117,33 @@ namespace ReflectionFramework.Internal {
             ctorIlGenerator.Emit(OpCodes.Ret);
 
             var result = typeBuilder.CreateType();
-            return (TWrapper) CreateInstance(result, ctorArgs);
+            return CreateInstance(result, ctorArgs);
         }
+        protected object CachedCreateImpl() {
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
+            Func<object, object> result;
+            if (CachedConstructors.TryGetValue(icc, out result)) {
+                return result(Element);
+            }
+            return CreateImpl();
+        }        
 
-        protected  virtual object CreateInstance(Type result, List<object> ctorArgs) {
+        protected object CachedCreateInstance(Type result, List<object> ctorArgs) {
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
+            CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
+            return CreateInstance(result, ctorArgs);
+        }
+        protected object CreateInstance(Type result, List<object> ctorArgs) {
             return Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
-        static void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, PropertyInfo propertyInfo, MethodInfo wrapperMethodInfo,
+        Func<object, object> CreateConstructor(Type result, List<object> ctorArgs) {
+            return (x) => Activator.CreateInstance(result, new[] { x }.Concat(ctorArgs.Skip(1)).ToArray());
+        }
+
+        
+
+        void DefineFieldGetterOrSetter(TypeBuilder typeBuilder, PropertyInfo propertyInfo, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
@@ -208,19 +164,32 @@ namespace ReflectionFramework.Internal {
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
             var returnType = wrapperMethodInfo.ReturnType;
+            bool wrapReturnType = ShouldWrapType(returnType);
+            if(method == MemberInfoKind.PropertySetter)
+                wrapReturnType = ShouldWrapType(parameterTypes[0]);
+            if (wrapReturnType && method == MemberInfoKind.PropertyGetter)
+                returnType = typeof(object);
+            if (wrapReturnType && method == MemberInfoKind.PropertySetter)
+                parameterTypes = new Type[] {typeof(object)};
             var useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
                 isStatic ? null : typeof(object), out useTuple);
             var fallbackMode = sourceFieldInfo == null;
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
-            }
-            else {
+            } else {
+                if (wrapReturnType && method == MemberInfoKind.PropertyGetter) {
+                    ilGenerator.Emit(OpCodes.Ldarg_0);
+                    ilGenerator.Emit(OpCodes.Ldtoken, wrapperMethodInfo.ReturnType);
+                }                    
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
                 ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+                if (wrapReturnType && method == MemberInfoKind.PropertySetter)
+                    ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+                else
                 ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
                 if (isStatic)
                     ilGenerator.Emit(OpCodes.Ldc_I4_1);
@@ -231,21 +200,34 @@ namespace ReflectionFramework.Internal {
                         ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
                         : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
             }
-            ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
+            ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);            
             if (!isStatic) {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
             }
             for (byte i = 0; i < parameterTypes.Length; i++) {
+                if (wrapReturnType && method == MemberInfoKind.PropertySetter) {
+                    ilGenerator.Emit(OpCodes.Ldarg_0);
+                }
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
+                if (wrapReturnType && method == MemberInfoKind.PropertySetter) {
+                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
+                }                    
             }
             ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+            if (wrapReturnType && method == MemberInfoKind.PropertyGetter) {                
+                ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+            }
             ilGenerator.Emit(OpCodes.Ret);
 
-            typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+            typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));
         }
 
-        static void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, MemberInfo baseMemberInfo,
+        static bool ShouldWrapType(Type type) {
+            return type.GetCustomAttributes(typeof(ReflectionHelperAttributes.WrapperAttribute), false).Any();
+        }
+
+        void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, MemberInfo baseMemberInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
@@ -279,8 +261,7 @@ namespace ReflectionFramework.Internal {
             var fallbackMode = sourceMethodInfo == null;
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
-            }
-            else {
+            } else {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
@@ -324,7 +305,7 @@ namespace ReflectionFramework.Internal {
             }
             ilGenerator.Emit(OpCodes.Ret);
 
-            typeBuilder.DefineMethodOverride(methodBuilder, typeof(TWrapper).GetMethod(wrapperMethodInfo.Name));
+            typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));
         }
 
         static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
@@ -351,7 +332,7 @@ namespace ReflectionFramework.Internal {
             var tpls = tuples.ToArray();
             for (var i = 0; i < tpls.Length; i++) {
                 var tuple = tpls[i];
-                var value = (byte) tuple.Item1 + 1;
+                var value = (byte)tuple.Item1 + 1;
                 ilGenerator.Emit(OpCodes.Ldarg, value);
                 ilGenerator.Emit(OpCodes.Ldloc_0);
                 ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, i + index), null);
@@ -397,8 +378,7 @@ namespace ReflectionFramework.Internal {
                     if (type.IsClass) {
                         if (!stind)
                             opCode = OpCodes.Ldind_Ref;
-                    }
-                    else {
+                    } else {
                         generator.Emit(stind ? OpCodes.Stobj : OpCodes.Ldobj, type);
                         return;
                     }
@@ -437,15 +417,80 @@ namespace ReflectionFramework.Internal {
             unchecked {
                 var result = 0;
                 foreach (var setting in settings.Values) {
-                    result = (result*397) ^ setting.ComputeKey();
+                    result = (result * 397) ^ setting.ComputeKey();
                 }
                 return result;
             }
         }
 
         internal void WriteSetting(MemberInfo info, Action<ReflectionGeneratorInstanceSetting> func) {
-            var setting = (ReflectionGeneratorInstanceSetting) GetSetting(info, true);
+            var setting = (ReflectionGeneratorInstanceSetting)GetSetting(info, true);
             func(setting);
+        }
+    }
+
+    public class ReflectionGeneratorInstanceWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {                
+        public ReflectionGeneratorInstanceWrapper(ModuleBuilder builder, object element) : base(builder, element, false) {}
+
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
+            return DefineProperty<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
+        }
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
+            return DefineMethod<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
+        }
+
+        protected override object CreateInstanceOverride(Type result, List<object> ctorArgs) {
+            return CachedCreateInstance(result, ctorArgs);
+        }
+        protected override object CreateOverride() {
+            return CachedCreateImpl();
+        }
+    }
+
+    public class ReflectionGeneratorStaticWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
+        public ReflectionGeneratorStaticWrapper(ModuleBuilder builder, object element) : base(builder, element, true) {}
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineProperty(Expression<Func<TWrapper, object>> expression) {
+            return DefineProperty<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
+        }
+
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorStaticWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
+            return DefineMethod<ReflectionGeneratorStaticWrapper<TWrapper>>(expression);
+        }
+    }
+    public class ReflectionGeneratorWrapper<TWrapper> : BaseReflectionGeneratorInstance {        
+
+        public ReflectionGeneratorWrapper(ModuleBuilder builder, object element, bool isStatic) : base(builder, element, isStatic, typeof(TWrapper)) {            
+        }
+
+        public TWrapper Create() {
+            return (TWrapper)base.CreateImpl();
+        }
+
+        public ReflectionGeneratorWrapper<TWrapper> DefaultBindingFlags(
+            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public) {
+            defaultFlags = flags;
+            return this;
+        }
+
+        protected ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineProperty<TReflectionGeneratorWrapper>(
+            Expression<Func<TWrapper, object>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
+            if (expression.Body is MemberExpression)
+                return
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
+                        (expression.Body as MemberExpression).Member,
+                        (TReflectionGeneratorWrapper)this);
+            if (expression.Body is UnaryExpression)
+                return
+                    new ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>(
+                        ((expression.Body as UnaryExpression).Operand as MemberExpression).Member,
+                        (TReflectionGeneratorWrapper)this);
+            return null;
+        }
+
+        protected ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> DefineMethod<TReflectionGeneratorWrapper>(
+            Expression<Action<TWrapper>> expression) where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
+            return new ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper>((expression.Body as MethodCallExpression).Method,
+                (TReflectionGeneratorWrapper)this);
         }        
     }    
 }
