@@ -19,10 +19,26 @@ namespace ReflectionFramework {
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
         public class NameAttribute : Attribute {
             readonly string name;
-            public string Name { get { return name; } }
+
+            public string Name {
+                get { return name; }
+            }
+
             public NameAttribute(string name) {
                 this.name = name;
             }
-        }        
+        }
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property)]
+        public class InterfaceMemberAttribute : Attribute {
+            public string InterfaceName { get; }
+            public InterfaceMemberAttribute(string interfaceTypeName) {
+                InterfaceName = interfaceTypeName;
+            }
+
+            public InterfaceMemberAttribute(Type interfacType) : this(interfacType.FullName) {}
+        }
+        [Obsolete("Not implemented yet")]
+        [AttributeUsage(AttributeTargets.Interface)]
+        public class WrapperAttribute : Attribute { }
     }
 }

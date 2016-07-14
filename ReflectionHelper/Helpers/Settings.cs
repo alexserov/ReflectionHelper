@@ -24,14 +24,21 @@ namespace ReflectionFramework {
             var attr = GetAttribute<ReflectionHelperAttributes.BindingFlagsAttribute>(memberInfo) ?? GetAttribute<ReflectionHelperAttributes.BindingFlagsAttribute>();
             if (attr != null)
                 return attr.Flags;
+            if (GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo) != null)
+                return BindingFlags.Instance | BindingFlags.NonPublic;
             return reflectionGeneratorInstance.defaultFlags;
         }
 
         internal virtual string GetName(string defaultName, MemberInfo memberInfo) {
+            var prefix = GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo);
+            string prefixName = "";
+            if (prefix != null)
+                prefixName = prefix.InterfaceName + ".";
             var attr = GetAttribute<ReflectionHelperAttributes.NameAttribute>(memberInfo);
             if (attr != null)
-                return attr.Name;
-            return defaultName;
+                return prefixName + attr.Name;
+            
+            return prefixName + defaultName;
         }
 
         internal virtual bool FieldAccessor(MemberInfo memberInfo) {
@@ -58,13 +65,18 @@ namespace ReflectionFramework {
         public Delegate FallbackAction { get; set; }
         public Delegate GetterFallbackAction { get; set; }
         public Delegate SetterFallbackAction { get; set; }
+        public string InterfaceName { get; set; }
 
         internal override BindingFlags GetBindingFlags(MemberInfo wrapperMethodInfo) {
             return BindingFlags ?? base.GetBindingFlags(wrapperMethodInfo);
         }
 
         internal override string GetName(string defaultName, MemberInfo memberInfo) {
-            return Name ?? base.GetName(defaultName, memberInfo);
+            string prefix = "";
+            if (!string.IsNullOrEmpty(InterfaceName)) {
+                prefix = InterfaceName + ".";
+            }
+            return prefix + (Name ?? base.GetName(defaultName, memberInfo));
         }
 
         internal override bool FieldAccessor(MemberInfo memberInfo) {
@@ -97,6 +109,7 @@ namespace ReflectionFramework {
                 hashCode = (hashCode * 397) ^ (FallbackAction != null ? FallbackAction.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (GetterFallbackAction != null ? GetterFallbackAction.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SetterFallbackAction != null ? SetterFallbackAction.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (InterfaceName != null ? InterfaceName.GetHashCode() : 0);
                 return hashCode;
             }
         }

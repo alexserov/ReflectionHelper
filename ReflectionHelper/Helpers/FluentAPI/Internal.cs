@@ -21,6 +21,17 @@ namespace ReflectionFramework.Internal {
         protected void NameImpl(string name) {
             root.WriteSetting(info, x => x.Name = name);
         }
+
+        protected void InterfaceImpl(string name) {
+            root.WriteSetting(info, x=>x.InterfaceName = name);            
+            BindingFlagsImpl(BindingFlags.Instance | BindingFlags.NonPublic);
+        }
+        protected void InterfaceImpl(Type type) {
+            InterfaceImpl(type.FullName);
+        }
+        protected void InterfaceImpl<T>() {
+            InterfaceImpl(typeof(T));
+        }
         protected void FallbackImpl(Delegate fallbackAction) {
             root.WriteSetting(info, x => x.FallbackAction = fallbackAction);
         }
@@ -32,7 +43,10 @@ namespace ReflectionFramework.Internal {
         public TReflectionGeneratorWrapper EndMember() { return root; }
         public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> BindingFlags(BindingFlags flags) { BindingFlagsImpl(flags); return this; }
         public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> Name(string name) { NameImpl(name); return this; }
-        public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> Fallback(Delegate fallbackAction) { FallbackImpl(fallbackAction); return this; }        
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> Fallback(Delegate fallbackAction) { FallbackImpl(fallbackAction); return this; }
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember(string name) { InterfaceImpl(name); return this; }
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember<T>() { InterfaceImpl<T>(); return this; }
+        public ReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember(Type interfaceType) { InterfaceImpl(interfaceType); return this; }
     }
 
     public class ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> : BaseReflectionGeneratorMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> where TReflectionGeneratorWrapper : ReflectionGeneratorWrapper<TWrapper> {
@@ -43,6 +57,9 @@ namespace ReflectionFramework.Internal {
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> BindingFlags(BindingFlags flags) { BindingFlagsImpl(flags); return this; }
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> Name(string name) { NameImpl(name); return this; }
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> Fallback(Delegate fallbackAction) { FallbackImpl(fallbackAction); return this; }
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember(string name) { InterfaceImpl(name); return this; }
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember<T>() { InterfaceImpl<T>(); return this; }
+        public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> InterfaceMember(Type interfaceType) { InterfaceImpl(interfaceType); return this; }
 
         public ReflectionGeneratorPropertyMemberInfoInstance<TWrapper, TReflectionGeneratorWrapper> FieldAccessor() {
             root.WriteSetting(info, x => x.IsField = true);
