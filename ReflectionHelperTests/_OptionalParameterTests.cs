@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ReflectionFramework;
-using NUnit.Framework;
+using Xunit;
+
 
 namespace ReflectionHelperTests {
     internal class Class5 {
@@ -26,33 +27,32 @@ namespace ReflectionHelperTests {
         void OptionalParamsMethod3(string str = "hello");
     }
 
-    [TestFixture]
     public class OptionalParametersTest {
-        [Test]
+        [Fact]
         public void OptionalParamsMethod1() {
             var cl5 = new Class5();
             var wcl5 = cl5.Wrap<IClass5>();
             wcl5.OptionalParamsMethod1();
-            Assert.AreEqual("hello", cl5.String);
+            Assert.Equal("hello", cl5.String);
             wcl5.OptionalParamsMethod1("world");
-            Assert.AreEqual("world", cl5.String);
+            Assert.Equal("world", cl5.String);
         }
 
-        [Test]
+        [Fact]
         public void OptionalParamsMethod2() {
             var cl5 = new Class5();
             var wcl5 = cl5.Wrap<IClass5>();
             wcl5.OptionalParamsMethod2("hello");
-            Assert.AreEqual("hello", cl5.String);
+            Assert.Equal("hello", cl5.String);
         }
-        [Test]
+        [Fact]
         public void OptionalParamsMethod3() {
             var cl5 = new Class5();
             var wcl5 = cl5.Wrap<IClass5>();
             wcl5.OptionalParamsMethod3();
-            Assert.AreEqual("hello", cl5.String);
+            Assert.Equal("hello", cl5.String);
             wcl5.OptionalParamsMethod3("world");
-            Assert.AreEqual("world", cl5.String);
+            Assert.Equal("world", cl5.String);
         }
     }
 }

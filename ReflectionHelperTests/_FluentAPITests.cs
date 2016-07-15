@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using ReflectionFramework;
-using NUnit.Framework.Internal;
-using NUnit.Framework;
+using Xunit;
+
 
 namespace ReflectionHelperTests {
     internal class FulentAPITestObject {
@@ -32,9 +32,8 @@ namespace ReflectionHelperTests {
         string PrivateMethod(string value);
     }
 
-    [TestFixture]
     public class FluentAPITests {
-        [Test]
+        [Fact]
         public void Simple() {
             var tc = new FulentAPITestObject();
             var ti = tc.DefineWrapper<IFluentAPITestObject>()
@@ -50,7 +49,7 @@ namespace ReflectionHelperTests {
                     .EndMember()
                 .Create();
             ti.stringField = "hello";
-            Assert.AreEqual("hello", ti.stringField);
+            Assert.Equal("hello", ti.stringField);
         }
     }
 }

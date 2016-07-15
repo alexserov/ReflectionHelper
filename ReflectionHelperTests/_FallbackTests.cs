@@ -4,17 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ReflectionFramework;
-using NUnit.Framework;
+using Xunit;
+
 
 namespace ReflectionHelperTests {
     public interface IObject {
         string Property { get; set; }
         void Method();
         void Method2(ref string param);
-    }
-    [TestFixture]
+    }    
     public class FallbackTests {
-        [Test]
+        [Fact]
         public void FallbackTest() {
             string fake = null;
             var wrapper = new object().DefineWrapper<IObject>()
@@ -29,11 +29,11 @@ namespace ReflectionHelperTests {
                 .Fallback(new Func<object, string, Tuple<string>>((x,a)=>new Tuple<string>("abc")))
                 .EndMember()                       
                 .Create();
-            Assert.AreEqual("hello", wrapper.Property);
+            Assert.Equal("hello", wrapper.Property);
             string str = "def";
             wrapper.Method();
             wrapper.Method2(ref str);
-            Assert.AreEqual("abc", str);
+            Assert.Equal("abc", str);
         }
     }
 }

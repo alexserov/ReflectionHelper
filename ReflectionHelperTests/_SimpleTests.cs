@@ -5,7 +5,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using ReflectionFramework;
-using NUnit.Framework;
+using Xunit;
+
 
 namespace ReflectionHelperTests {
     public class Class1 {
@@ -38,17 +39,16 @@ namespace ReflectionHelperTests {
         string PublicStringProperty { get; set; }
     }
     
-    [TestFixture]
-    internal class Tests {
+    public class Tests {
        
-        [Test]
+        [Fact]
         public void PublicVoidMethodTest() {
             Class1 cl = new Class1();
             var wrapped = cl.Wrap<IClass1>();
             wrapped.PublicVoidMethod();
-            Assert.AreEqual("PublicVoidMethod", cl.LastMethod);
+            Assert.Equal("PublicVoidMethod", cl.LastMethod);
         }
-        [Test]
+        [Fact]
         public void PrivateVoidMethodTest() {
             Class1 cl = new Class1();
             var wrapped = cl.DefineWrapper<IClass1>()
@@ -57,17 +57,17 @@ namespace ReflectionHelperTests {
                 .EndMember()
                 .Create();
             wrapped.PrivateVoidMethod();
-            Assert.AreEqual("PrivateVoidMethod", cl.LastMethod);
+            Assert.Equal("PrivateVoidMethod", cl.LastMethod);
         }
-        [Test]
+        [Fact]
         public void PublicStringPropertyTest() {
             Class1 cl = new Class1();
             var wrapped = cl.DefineWrapper<IClass1>()
                 .Create();
             wrapped.PublicStringProperty = "hello";
-            Assert.AreEqual("set_PublicStringProperty", cl.LastMethod);
-            Assert.AreEqual("hello", wrapped.PublicStringProperty);
-            Assert.AreEqual("get_PublicStringProperty", cl.LastMethod);
+            Assert.Equal("set_PublicStringProperty", cl.LastMethod);
+            Assert.Equal("hello", wrapped.PublicStringProperty);
+            Assert.Equal("get_PublicStringProperty", cl.LastMethod);
         }
     }
 }

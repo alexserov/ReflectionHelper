@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using ReflectionFramework;
-using NUnit.Framework;
+using Xunit;
+
 
 namespace ReflectionHelperTests {
     internal class StaticFulentAPITestObject {
@@ -26,9 +27,8 @@ namespace ReflectionHelperTests {
         string PrivateMethod(string value);
     }
 
-    [TestFixture]
     public class StaticFluentAPITests {
-        [Test]
+        [Fact]
         public void Simple() {
             var ti = ReflectionGenerator.DefineWrapper<StaticFulentAPITestObject, IFluentAPITestObject>()
                 .DefineProperty(x => x.PrivateStringProperty)
@@ -42,9 +42,9 @@ namespace ReflectionHelperTests {
                 .BindingFlags(BindingFlags.NonPublic | BindingFlags.Public)
                 .EndMember()
                 .Create();
-            Assert.AreEqual("hello", ti.PublicMethod("hello"));
+            Assert.Equal("hello", ti.PublicMethod("hello"));
             ti.stringField = "hello";
-            Assert.AreEqual("hello", ti.stringField);
+            Assert.Equal("hello", ti.stringField);
         }
     }
 }
