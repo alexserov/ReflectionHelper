@@ -209,30 +209,34 @@ namespace ReflectionFramework.Internal {
         }
 
         void SetCachedDelegate<TKey>(TKey key, Delegate result, Dictionary<TKey, WeakReference<Delegate>> globalCache, Dictionary<TKey, Delegate> localCache) where TKey : struct {
+            performingCleanup++;
             localCache[key] = result;
-            globalCache[key] = new WeakReference<Delegate>(result);
+            lock (cleanupLock) {
+                globalCache[key] = new WeakReference<Delegate>(result);
+            }            
+            performingCleanup--;
             CheckCleanup();
         }
 
-        static bool performingCleanup;
+        static int performingCleanup;
         static readonly object cleanupLock = new object();
         static void CheckCleanup() {
             currentCalls++;
             if (currentCalls > CallsToCleanup) {
-                if(performingCleanup)
+                if(performingCleanup!=0)
                     return;
                 lock (cleanupLock) {
-                    if(performingCleanup || currentCalls < CallsToCleanup)
+                    if(performingCleanup!=0 || currentCalls < CallsToCleanup)
                         return;
                     try {
-                        performingCleanup = true;
+                        performingCleanup++;
                         DoLockedCleanup(globalDelegateCache);
                         DoLockedCleanup(globalFieldGetterCache);
                         DoLockedCleanup(globalFieldSetterCache);
                         DoLockedCleanup(globalGenericDelegateCache);
                     }
                     finally {
-                        performingCleanup = false;
+                        performingCleanup--;
                     }
                 }
             }
@@ -299,7 +303,6 @@ namespace ReflectionFramework.Internal {
         public object Wrap(Type wrapperType, object obj) {
             DoNotRemove(obj);
             DoNotRemove(wrapperType);
-            //Log.Write($"Wrap for {wrapperType}; object is {obj}");
             return ReflectionGenerator.Wrap(obj, wrapperType);
         }
         public object Unwrap(ReflectionGeneratedObject wrapper) {
