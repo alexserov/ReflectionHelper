@@ -37,9 +37,10 @@ namespace ReflectionHelperTests {
         public void FieldsTest() {
             var sc2 = new SomeClass2();
             var sc2W = sc2.Wrap<ISomeClass2>();
-            //Assert.Equal("Hello", sc2W.field.Prop1);
-            //sc2W.field = new SomeClass1() { Prop1 = "World" }.Wrap<ISomeClass1>();
-            //Assert.Equal("World", sc2W.field.Prop1);
+            Assert.NotNull(sc2W.field);
+            Assert.Equal("Hello", sc2W.field.Prop1);
+            sc2W.field = new SomeClass1() { Prop1 = "World" }.Wrap<ISomeClass1>();
+            Assert.Equal("World", sc2W.field.Prop1);
         }        
     }
 }

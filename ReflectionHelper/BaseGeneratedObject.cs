@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
     public class ReflectionGeneratedObject {
@@ -292,10 +293,17 @@ namespace ReflectionFramework.Internal {
             return (Delegate) ReflectionHelper.CreateMethodHandlerImpl(info, instanceType, delegateType, true, useTuple);
         }
 
+        static void DoNotRemove(object obj) {
+            
+        }
         public object Wrap(Type wrapperType, object obj) {
+            DoNotRemove(obj);
+            DoNotRemove(wrapperType);
+            //Log.Write($"Wrap for {wrapperType}; object is {obj}");
             return ReflectionGenerator.Wrap(obj, wrapperType);
         }
         public object Unwrap(ReflectionGeneratedObject wrapper) {
+            DoNotRemove(wrapper);
             return wrapper.source;
         }
     }

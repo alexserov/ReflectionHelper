@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
     internal enum MemberInfoKind {
@@ -65,6 +66,7 @@ namespace ReflectionFramework.Internal {
         }
 
         protected object CreateImpl() {
+            Log.Write($"Generating {tWrapper}");
             var typeBuilder = moduleBuilder.DefineType(tWrapper.Name + Guid.NewGuid(),
                 TypeAttributes.Public,
                 typeof(ReflectionGeneratedObject));
@@ -164,33 +166,37 @@ namespace ReflectionFramework.Internal {
                 parameterTypes);
             var ilGenerator = methodBuilder.GetILGenerator();
             var returnType = wrapperMethodInfo.ReturnType;
-            bool wrapReturnType = ShouldWrapType(returnType);
-            if(method == MemberInfoKind.PropertySetter)
-                wrapReturnType = ShouldWrapType(parameterTypes[0]);
-            if (wrapReturnType && method == MemberInfoKind.PropertyGetter)
-                returnType = typeof(object);
-            if (wrapReturnType && method == MemberInfoKind.PropertySetter)
-                parameterTypes = new Type[] {typeof(object)};
+            bool wrapReturnType = method == MemberInfoKind.PropertyGetter && ShouldWrapType(returnType);
+            bool wrapParameterType = method == MemberInfoKind.PropertySetter && !wrapReturnType && ShouldWrapType(parameterTypes[0]);
+            Type unwrappedReturnType, unwrappedParameterType;
+            Type[] unwrappedParameterTypes = parameterTypes;
+            unwrappedReturnType = wrapReturnType ? typeof(object) : returnType;
+            if (wrapParameterType) {
+                unwrappedParameterType = sourceFieldInfo.FieldType;
+                unwrappedParameterTypes = new Type[] {unwrappedParameterType};
+            } else {
+                unwrappedParameterType = null;
+            }
+            
             var useTuple = false;
-            var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
+            var delegateType = ReflectionHelper.MakeGenericDelegate(unwrappedParameterTypes, ref unwrappedReturnType,
                 isStatic ? null : typeof(object), out useTuple);
             var fallbackMode = sourceFieldInfo == null;
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
             } else {
-                if (wrapReturnType && method == MemberInfoKind.PropertyGetter) {
+                if (wrapReturnType) {
                     ilGenerator.Emit(OpCodes.Ldarg_0);
-                    ilGenerator.Emit(OpCodes.Ldtoken, wrapperMethodInfo.ReturnType);
-                }                    
+                    ilGenerator.Emit(OpCodes.Ldtoken, returnType);
+                }
                 ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
+                Ldfld(ilGenerator, fieldInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
                 ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
-                if (wrapReturnType && method == MemberInfoKind.PropertySetter)
+                if (wrapParameterType)
                     ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
                 else
-                ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
+                    ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
                 if (isStatic)
                     ilGenerator.Emit(OpCodes.Ldc_I4_1);
                 else
@@ -202,25 +208,31 @@ namespace ReflectionFramework.Internal {
             }
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);            
             if (!isStatic) {
-                ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
+                Ldfld(ilGenerator, sourceObjectField);
             }
             for (byte i = 0; i < parameterTypes.Length; i++) {
-                if (wrapReturnType && method == MemberInfoKind.PropertySetter) {
+                if (wrapParameterType) {
                     ilGenerator.Emit(OpCodes.Ldarg_0);
                 }
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
-                if (wrapReturnType && method == MemberInfoKind.PropertySetter) {
+                if (wrapParameterType) {
                     ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
-                }                    
+                    ReflectionHelper.CastClass(ilGenerator, parameterTypes[0], unwrappedParameterType);
+                }
             }
             ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
-            if (wrapReturnType && method == MemberInfoKind.PropertyGetter) {                
+            if (wrapReturnType) {
                 ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
 
-            typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));
+            typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));            
+        }
+
+        static void Ldfld(ILGenerator generator, FieldBuilder fieldBuilder) {
+            generator.Emit(OpCodes.Ldarg_0);
+            generator.Emit(OpCodes.Ldfld, fieldBuilder);
         }
 
         static bool ShouldWrapType(Type type) {
@@ -263,8 +275,7 @@ namespace ReflectionFramework.Internal {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
             } else {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldfld, fieldInfo);
+                Ldfld(ilGenerator, fieldInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
                 ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
                 if (useTuple)
@@ -287,8 +298,7 @@ namespace ReflectionFramework.Internal {
             }
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             if (!isStatic) {
-                ilGenerator.Emit(OpCodes.Ldarg_0);
-                ilGenerator.Emit(OpCodes.Ldfld, sourceObjectField);
+                Ldfld(ilGenerator, sourceObjectField);
             }
             for (byte i = 0; i < parameterTypes.Length; i++) {
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
@@ -316,8 +326,7 @@ namespace ReflectionFramework.Internal {
                 fallback.GetType(), FieldAttributes.Family);
             ctorInfos.Add(fallbackField);
             ctorArgs.Add(fallback);
-            ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Ldfld, fallbackField);
+            Ldfld(ilGenerator, fallbackField);
         }
 
 
@@ -463,7 +472,7 @@ namespace ReflectionFramework.Internal {
         }
 
         public TWrapper Create() {
-            return (TWrapper)base.CreateImpl();
+            return (TWrapper)CreateOverride();
         }
 
         public ReflectionGeneratorWrapper<TWrapper> DefaultBindingFlags(
