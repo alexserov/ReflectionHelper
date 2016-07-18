@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="_AttributesTests.cs" />
+    <Compile Include="_InheritedInterfacesTests.cs" />
     <Compile Include="_InterfaceTests.cs" />
     <Compile Include="_StaticTests.cs" />
     <Compile Include="_FallbackTests.cs" />

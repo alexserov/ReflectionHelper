@@ -79,13 +79,13 @@ namespace ReflectionFramework.Internal {
             ctorInfos.Add(sourceObjectField);
             ctorArgs.Add(element);
 
-            foreach (var wrapperMethodInfo in tWrapper.GetMethods()) {
+            foreach (var wrapperMethodInfo in GetMethods()) {
                 if (wrapperMethodInfo.IsSpecialName)
                     continue;
                 DefineMethod(typeBuilder, wrapperMethodInfo, null, ctorInfos, ctorArgs, sourceType,
                     sourceObjectField, GetSetting(wrapperMethodInfo), MemberInfoKind.Method, isStatic);
             }
-            foreach (var propertyInfo in tWrapper.GetProperties()) {
+            foreach (var propertyInfo in GetProperties()) {
                 var setting = GetSetting(propertyInfo);
                 var field = setting.FieldAccessor(propertyInfo);
                 var getMethod = propertyInfo.GetGetMethod(true);
@@ -121,6 +121,22 @@ namespace ReflectionFramework.Internal {
             var result = typeBuilder.CreateType();
             return CreateInstance(result, ctorArgs);
         }
+
+        IEnumerable<PropertyInfo> GetProperties() {
+            return IterateInterfaces().SelectMany(x => x.GetProperties());
+        }
+
+        IEnumerable<Type> IterateInterfaces() {
+            yield return tWrapper;
+            foreach (var type in tWrapper.GetInterfaces()) {
+                yield return type;
+            }
+        }
+
+        IEnumerable<MethodInfo> GetMethods() {
+            return IterateInterfaces().SelectMany(x => x.GetMethods());
+        }
+
         protected object CachedCreateImpl() {
             InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
             Func<object, object> result;
@@ -340,7 +356,7 @@ namespace ReflectionFramework.Internal {
             }
             ilGenerator.Emit(OpCodes.Ret);
 
-            typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));
+            typeBuilder.DefineMethodOverride(methodBuilder, wrapperMethodInfo);
         }
 
         static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
