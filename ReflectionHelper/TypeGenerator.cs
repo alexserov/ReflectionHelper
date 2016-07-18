@@ -236,9 +236,12 @@ namespace ReflectionFramework.Internal {
         }
 
         static bool ShouldWrapType(Type type) {
+            if(type.IsByRef)
+                return ShouldWrapType(type.GetElementType());
             return type.GetCustomAttributes(typeof(ReflectionHelperAttributes.WrapperAttribute), false).Any();
         }
 
+        static readonly Type tpObject = typeof(object).Assembly.GetType(typeof(object).FullName + "&");
         void DefineMethod(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, MemberInfo baseMemberInfo,
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
@@ -262,26 +265,37 @@ namespace ReflectionFramework.Internal {
             if (genericParameters.Length > 0)
                 genericParameterBuilders =
                     methodBuilder.DefineGenericParameters(genericParameters.Select(x => x.Name).ToArray());
-            var ilGenerator = methodBuilder.GetILGenerator();
+            Type[] updatedParameterTypes = new Type[parameterTypes.Length];
+            for (int i = 0; i < parameterTypes.Length; i++) {
+                var currentType = parameterTypes[i];
+                if (ShouldWrapType(currentType))
+                    updatedParameterTypes[i] = currentType.IsByRef ? tpObject : typeof(object);
+                else
+                    updatedParameterTypes[i] = currentType;
+            }
+            var ilGenerator = methodBuilder.GetILGenerator();            
             var returnType = wrapperMethodInfo.ReturnType;
+            var wrapReturnType = ShouldWrapType(returnType);
+            var unwrappedReturnTupe = wrapReturnType ? typeof(object) : returnType;
             var useTuple = false;
-            var delegateType = ReflectionHelper.MakeGenericDelegate(parameterTypes, ref returnType,
+            var delegateType = ReflectionHelper.MakeGenericDelegate(updatedParameterTypes, ref unwrappedReturnTupe,
                 isStatic ? null : typeof(object), out useTuple);
-            var createsTuple = wrapperMethodInfo.ReturnType != returnType;
-            if (createsTuple)
-                ilGenerator.DeclareLocal(returnType);
+            LocalBuilder tupleLocalBuilder = null;
+            if (useTuple)
+                tupleLocalBuilder = ilGenerator.DeclareLocal(unwrappedReturnTupe);
             var fallbackMode = sourceMethodInfo == null;
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
             } else {
+                if (wrapReturnType) {
+                    ilGenerator.Emit(OpCodes.Ldarg_0);
+                    ilGenerator.Emit(OpCodes.Ldtoken, returnType);
+                }                    
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 Ldfld(ilGenerator, fieldInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
                 ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
-                if (useTuple)
-                    ilGenerator.Emit(OpCodes.Ldc_I4_1);
-                else
-                    ilGenerator.Emit(OpCodes.Ldc_I4_0);
+                ilGenerator.Emit(useTuple ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 var methodInfo = ReflectionGeneratedObject.GetDelegateMethodInfo;
                 if (genericParameters.Length > 0) {
                     ilGenerator.Emit(OpCodes.Ldc_I4, genericParameters.Length);
@@ -300,18 +314,29 @@ namespace ReflectionFramework.Internal {
             if (!isStatic) {
                 Ldfld(ilGenerator, sourceObjectField);
             }
-            for (byte i = 0; i < parameterTypes.Length; i++) {
-                ilGenerator.Emit(OpCodes.Ldarg, i + 1);
-                var paramType = parameterTypes[i];
-                if (paramType.IsByRef) {
-                    LSTind(ilGenerator, paramType.GetElementType(), false);
-                }
+            for (byte i = 0; i < updatedParameterTypes.Length; i++) {
+                var paramType = updatedParameterTypes[i];
+                if (parameterTypes[i] != updatedParameterTypes[i]) {
+                    ilGenerator.Emit(OpCodes.Ldarg_0);
+                    ilGenerator.Emit(OpCodes.Ldarg, i + 1);
+                    if (paramType.IsByRef)
+                        LSTind(ilGenerator, paramType.GetElementType(), false);
+                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
+                } else {
+                    ilGenerator.Emit(OpCodes.Ldarg, i + 1);
+                    if (paramType.IsByRef)
+                        LSTind(ilGenerator, paramType.GetElementType(), false);
+                }                
             }
             ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
 
-            if (createsTuple) {
-                SyncTupleItems(parameterTypes.Select((x, i) => new Tuple<int, Type>(i, x)).Where(x => x.Item2.IsByRef),
-                    returnType, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator);
+            if (useTuple) {
+                SyncTupleItems(updatedParameterTypes.Select((x, i) => new Tuple<int, Type, Type>(i, x, parameterTypes[i])).Where(x => x.Item2.IsByRef),
+                    unwrappedReturnTupe, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator, tupleLocalBuilder);
+            }
+            if (wrapReturnType) {
+                ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
 
@@ -330,12 +355,12 @@ namespace ReflectionFramework.Internal {
         }
 
 
-        static void SyncTupleItems(IEnumerable<Tuple<int, Type>> tuples, Type returnType, bool skipFirst,
-            ILGenerator ilGenerator) {
+        static void SyncTupleItems(IEnumerable<Tuple<int, Type, Type>> tuples, Type returnType, bool skipFirst,
+            ILGenerator ilGenerator, LocalBuilder tupleLocalBuilder) {
             var index = skipFirst ? 1 : 0;
-            ilGenerator.Emit(OpCodes.Stloc_0);
+            ilGenerator.Emit(OpCodes.Stloc, tupleLocalBuilder);
             if (skipFirst) {
-                ilGenerator.Emit(OpCodes.Ldloc_0);
+                ilGenerator.Emit(OpCodes.Ldloc, tupleLocalBuilder);
                 ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, 0), null);
             }
             var tpls = tuples.ToArray();
@@ -343,9 +368,17 @@ namespace ReflectionFramework.Internal {
                 var tuple = tpls[i];
                 var value = (byte)tuple.Item1 + 1;
                 ilGenerator.Emit(OpCodes.Ldarg, value);
-                ilGenerator.Emit(OpCodes.Ldloc_0);
+                if (tuple.Item2 != tuple.Item3) {
+                    ilGenerator.Emit(OpCodes.Ldarg_0);
+                    ilGenerator.Emit(OpCodes.Ldtoken, tuple.Item3.GetElementType());
+                }                
+                ilGenerator.Emit(OpCodes.Ldloc, tupleLocalBuilder);
                 ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, i + index), null);
-                LSTind(ilGenerator, tuple.Item2.GetElementType(), true);
+                if (tuple.Item2 != tuple.Item3) {
+                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                    ReflectionHelper.CastClass(ilGenerator, tuple.Item2.GetElementType(), tuple.Item3.GetElementType());
+                }
+                LSTind(ilGenerator, tuple.Item3.GetElementType(), true);
             }
         }
 

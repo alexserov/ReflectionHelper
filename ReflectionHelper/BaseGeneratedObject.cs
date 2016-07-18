@@ -303,10 +303,14 @@ namespace ReflectionFramework.Internal {
         public object Wrap(Type wrapperType, object obj) {
             DoNotRemove(obj);
             DoNotRemove(wrapperType);
+            if (obj == null)
+                return null;
             return ReflectionGenerator.Wrap(obj, wrapperType);
         }
         public object Unwrap(ReflectionGeneratedObject wrapper) {
             DoNotRemove(wrapper);
+            if(wrapper==null)
+                return null;
             return wrapper.source;
         }
     }
