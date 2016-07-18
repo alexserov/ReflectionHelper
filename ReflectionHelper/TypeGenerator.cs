@@ -56,18 +56,12 @@ namespace ReflectionFramework.Internal {
         }
 
         internal object CreateInternal() {
-            return CreateOverride();
-        }
-        protected virtual object CreateOverride() {
-            return CreateImpl();
-        }
-        protected virtual object CreateInstanceOverride(Type result, List<object> ctorArgs) {
-            return CreateInstance(result, ctorArgs);
-        }
+            return CachedCreateImpl();
+        }                
 
-        protected object CreateImpl() {
+        object CreateImpl() {
             if (!CheckAssignableFromAttribute())
-                return CreateInstanceOverride(null, null);
+                return CachedCreateInstance(null, null);
             Log.Write($"Generating {tWrapper}");
             var typeBuilder = moduleBuilder.DefineType(tWrapper.Name + Guid.NewGuid(),
                 TypeAttributes.Public,
@@ -121,7 +115,7 @@ namespace ReflectionFramework.Internal {
             ctorIlGenerator.Emit(OpCodes.Ret);
 
             var result = typeBuilder.CreateType();
-            return CreateInstance(result, ctorArgs);
+            return CachedCreateInstance(result, ctorArgs);
         }
 
         bool CheckAssignableFromAttribute() {
@@ -185,7 +179,7 @@ namespace ReflectionFramework.Internal {
             CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
             return CreateInstance(result, ctorArgs);
         }
-        protected object CreateInstance(Type result, List<object> ctorArgs) {
+        object CreateInstance(Type result, List<object> ctorArgs) {
             if (result == null)
                 return null;
             return Activator.CreateInstance(result, ctorArgs.ToArray());
@@ -531,14 +525,7 @@ namespace ReflectionFramework.Internal {
         }
         public ReflectionGeneratorMemberInfoInstance<TWrapper, ReflectionGeneratorInstanceWrapper<TWrapper>> DefineMethod(Expression<Action<TWrapper>> expression) {
             return DefineMethod<ReflectionGeneratorInstanceWrapper<TWrapper>>(expression);
-        }
-
-        protected override object CreateInstanceOverride(Type result, List<object> ctorArgs) {
-            return CachedCreateInstance(result, ctorArgs);
-        }
-        protected override object CreateOverride() {
-            return CachedCreateImpl();
-        }
+        }        
     }
 
     public class ReflectionGeneratorStaticWrapper<TWrapper> : ReflectionGeneratorWrapper<TWrapper> {
@@ -557,7 +544,7 @@ namespace ReflectionFramework.Internal {
         }
 
         public TWrapper Create() {
-            return (TWrapper)CreateOverride();
+            return (TWrapper)CachedCreateImpl();
         }
 
         public ReflectionGeneratorWrapper<TWrapper> DefaultBindingFlags(
