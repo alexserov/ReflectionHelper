@@ -42,12 +42,10 @@ namespace ReflectionFramework {
         public class WrapperAttribute : Attribute { }
         [AttributeUsage(AttributeTargets.Interface, AllowMultiple = true)]
         public class AssignableFromAttribute : Attribute {
-            public Type Type { get; private set; }
             public string TypeName { get; private set; }
             public bool Inverse { get; set; }
-            public AssignableFromAttribute(Type type) {
-                Type = type;
-            }
+            public AssignableFromAttribute(Type type) : this(type.FullName) {}
+
             public AssignableFromAttribute(string typeName) {
                 TypeName = typeName;
             }

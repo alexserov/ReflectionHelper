@@ -56,7 +56,7 @@ namespace ReflectionFramework.Internal {
         }
 
         internal object CreateInternal() {
-            return CreateImpl();
+            return CreateOverride();
         }
         protected virtual object CreateOverride() {
             return CreateImpl();
@@ -66,6 +66,8 @@ namespace ReflectionFramework.Internal {
         }
 
         protected object CreateImpl() {
+            if (!CheckAssignableFromAttribute())
+                return CreateInstanceOverride(null, null);
             Log.Write($"Generating {tWrapper}");
             var typeBuilder = moduleBuilder.DefineType(tWrapper.Name + Guid.NewGuid(),
                 TypeAttributes.Public,
@@ -122,6 +124,38 @@ namespace ReflectionFramework.Internal {
             return CreateInstance(result, ctorArgs);
         }
 
+        bool CheckAssignableFromAttribute() {
+            var assignableFrom = IterateInterfaces().SelectMany(x => x.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true)).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
+            var assignable = assignableFrom.Where(x => !x.Inverse).Select(x=>x.TypeName).ToList();
+            var unassignable = assignableFrom.Where(x => x.Inverse).Select(x => x.TypeName).ToList();
+            var tEnumerator = FlatternType(ElementType, true).GetEnumerator();
+            while (tEnumerator.MoveNext()) {
+                var currentType = tEnumerator.Current;
+                if (assignable.Count == 0 && unassignable.Count == 0)
+                    return true;
+                if (assignable.Contains(currentType.FullName)) {
+                    assignable.Remove(currentType.FullName);
+                }
+                if (unassignable.Contains(currentType.FullName))
+                    return false;
+            }
+            return false;
+        }
+
+        IEnumerable<Type> FlatternType(Type t, bool flatternInterfaces) {
+            if (t == null)
+                yield break;
+            if (flatternInterfaces)
+                foreach (var tInterface in t.GetInterfaces()) {
+                    yield return tInterface;
+                }
+            while (t != null) {
+                yield return t;
+                t = t.BaseType;
+            }
+
+        }
+
         IEnumerable<PropertyInfo> GetProperties() {
             return IterateInterfaces().SelectMany(x => x.GetProperties());
         }
@@ -137,7 +171,7 @@ namespace ReflectionFramework.Internal {
             return IterateInterfaces().SelectMany(x => x.GetMethods());
         }
 
-        protected object CachedCreateImpl() {
+        protected object CachedCreateImpl() {            
             InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
             Func<object, object> result;
             if (CachedConstructors.TryGetValue(icc, out result)) {
@@ -146,12 +180,14 @@ namespace ReflectionFramework.Internal {
             return CreateImpl();
         }        
 
-        protected object CachedCreateInstance(Type result, List<object> ctorArgs) {
+        protected object CachedCreateInstance(Type result, List<object> ctorArgs) {            
             InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
             CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
             return CreateInstance(result, ctorArgs);
         }
         protected object CreateInstance(Type result, List<object> ctorArgs) {
+            if (result == null)
+                return null;
             return Activator.CreateInstance(result, ctorArgs.ToArray());
         }
 
