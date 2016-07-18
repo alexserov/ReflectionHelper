@@ -119,9 +119,9 @@ namespace ReflectionFramework.Internal {
         }
 
         bool CheckAssignableFromAttribute() {
-            var assignableFrom = IterateInterfaces().SelectMany(x => x.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true)).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
-            var assignable = assignableFrom.Where(x => !x.Inverse).Select(x=>x.TypeName).ToList();
-            var unassignable = assignableFrom.Where(x => x.Inverse).Select(x => x.TypeName).ToList();
+            var assignableFrom = tWrapper.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
+            var assignable = assignableFrom.Where(x => !x.Inverse).Select(x=>x.GetTypeName()).ToList();
+            var unassignable = assignableFrom.Where(x => x.Inverse).Select(x => x.GetTypeName()).ToList();
             var tEnumerator = FlatternType(ElementType, true).GetEnumerator();
             while (tEnumerator.MoveNext()) {
                 var currentType = tEnumerator.Current;
@@ -133,7 +133,7 @@ namespace ReflectionFramework.Internal {
                 if (unassignable.Contains(currentType.FullName))
                     return false;
             }
-            return false;
+            return assignable.Count==0;
         }
 
         IEnumerable<Type> FlatternType(Type t, bool flatternInterfaces) {
