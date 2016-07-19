@@ -119,7 +119,7 @@ namespace ReflectionFramework.Internal {
         }
 
         bool CheckAssignableFromAttribute() {
-            var assignableFrom = tWrapper.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
+            var assignableFrom = IterateInterfaces().SelectMany(x=>x.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true)).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
             var assignable = assignableFrom.Where(x => !x.Inverse).Select(x=>x.GetTypeName()).ToList();
             var unassignable = assignableFrom.Where(x => x.Inverse).Select(x => x.GetTypeName()).ToList();
             var tEnumerator = FlatternType(ElementType, true).GetEnumerator();
@@ -186,6 +186,8 @@ namespace ReflectionFramework.Internal {
         }
 
         Func<object, object> CreateConstructor(Type result, List<object> ctorArgs) {
+            if (result == null)
+                return x => null;
             return (x) => Activator.CreateInstance(result, new[] { x }.Concat(ctorArgs.Skip(1)).ToArray());
         }
 
@@ -482,9 +484,9 @@ namespace ReflectionFramework.Internal {
         static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
             MemberInfoKind kind, MemberInfo memberInfo) {
             var result = setting.GetName(wrapperMethodInfo, memberInfo);
-            if (kind == MemberInfoKind.PropertyGetter && !result.StartsWith("get_"))
+            if (kind == MemberInfoKind.PropertyGetter && !result.Split('.').Last().StartsWith("get_"))
                 return "get_" + result;
-            if (kind == MemberInfoKind.PropertySetter && !result.StartsWith("set_"))
+            if (kind == MemberInfoKind.PropertySetter && !result.Split('.').Last().StartsWith("set_"))
                 return "set_" + result;
             return result;
         }
