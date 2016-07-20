@@ -7,7 +7,11 @@ using System.Runtime.CompilerServices;
 using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
-    public class ReflectionGeneratedObject {
+    public interface IReflectionGeneratedObject {
+        object Source { get; }
+    }
+
+    public class ReflectionGeneratedObject : IReflectionGeneratedObject {
         const int CallsToCleanup = 100;
         class WeakReference<T> where T : class {
             WeakReference impl;
@@ -163,8 +167,8 @@ namespace ReflectionFramework.Internal {
             GetGenericDelegateMethodInfo = GetMethodInfo(x => x.GetGenericDelegate(null, null, null, false, null));
             GetFieldGetterMethodInfo = GetMethodInfo(x => x.GetFieldGetter(null, null, null, null, false));
             GetFieldSetterMethodInfo = GetMethodInfo(x => x.GetFieldSetter(null, null, null, null, false));
-            WrapMethodInfo = GetMethodInfo(x => x.Wrap(null, null));
-            UnwrapMethodInfo = GetMethodInfo(x => x.Unwrap(null));
+            WrapMethodInfo = GetMethodInfo(x => Wrap(null, null));
+            UnwrapMethodInfo = GetMethodInfo(x => Unwrap(null));
         }
 
         readonly Dictionary<LocalFieldCacheKey, Delegate> localFieldGetterCache;
@@ -300,18 +304,22 @@ namespace ReflectionFramework.Internal {
         static void DoNotRemove(object obj) {
             
         }
-        public object Wrap(Type wrapperType, object obj) {
+        public static object Wrap(object obj, Type wrapperType) {
             DoNotRemove(obj);
             DoNotRemove(wrapperType);
             if (obj == null)
                 return null;
             return ReflectionGenerator.Wrap(obj, wrapperType);
         }
-        public object Unwrap(ReflectionGeneratedObject wrapper) {
+        public static object Unwrap(ReflectionGeneratedObject wrapper) {
             DoNotRemove(wrapper);
             if(wrapper==null)
                 return null;
             return wrapper.source;
+        }
+
+        object IReflectionGeneratedObject.Source {
+            get { return source; }
         }
     }
 }

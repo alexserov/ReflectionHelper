@@ -25,20 +25,19 @@ namespace ReflectionFramework {
             if (attr != null)
                 return attr.Flags;
             if (GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo) != null)
-                return BindingFlags.Instance | BindingFlags.NonPublic;
+                return BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
             return reflectionGeneratorInstance.defaultFlags;
         }
 
+        internal virtual bool GetIsInterface(string name, MemberInfo memberInfo) {
+            return GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo)!=null;
+        }
         internal virtual string GetName(string defaultName, MemberInfo memberInfo) {
-            var prefix = GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo);
-            string prefixName = "";
-            if (prefix != null)
-                prefixName = prefix.InterfaceName + ".";
             var attr = GetAttribute<ReflectionHelperAttributes.NameAttribute>(memberInfo);
             if (attr != null)
-                return prefixName + attr.Name;
+                return attr.Name;
             
-            return prefixName + defaultName;
+            return defaultName;
         }
 
         internal virtual bool FieldAccessor(MemberInfo memberInfo) {

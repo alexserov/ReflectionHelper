@@ -232,24 +232,20 @@ namespace ReflectionFramework.Internal {
             var fallbackMode = sourceFieldInfo == null;
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
-            } else {
-                if (wrapReturnType) {
-                    ilGenerator.Emit(OpCodes.Ldarg_0);
-                    ilGenerator.Emit(OpCodes.Ldtoken, returnType);
-                }
+            } else {                
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 Ldfld(ilGenerator, fieldInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
-                ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+                TypeOf(ilGenerator, delegateType);
+                TypeOf(ilGenerator, typeof(object));
                 if (wrapParameterType)
-                    ilGenerator.Emit(OpCodes.Ldtoken, typeof(object));
+                    TypeOf(ilGenerator, typeof(object));
                 else
-                    ilGenerator.Emit(OpCodes.Ldtoken, sourceFieldInfo.FieldType);
+                    TypeOf(ilGenerator, sourceFieldInfo.FieldType);
                 if (isStatic)
                     ilGenerator.Emit(OpCodes.Ldc_I4_1);
                 else
                     ilGenerator.Emit(OpCodes.Ldc_I4_0);
-                ilGenerator.EmitCall(OpCodes.Call,
+                EmitCall(ilGenerator,OpCodes.Call,
                     method == MemberInfoKind.PropertyGetter
                         ? ReflectionGeneratedObject.GetFieldGetterMethodInfo
                         : ReflectionGeneratedObject.GetFieldSetterMethodInfo, null);
@@ -258,19 +254,17 @@ namespace ReflectionFramework.Internal {
             if (!isStatic) {
                 Ldfld(ilGenerator, sourceObjectField);
             }
-            for (byte i = 0; i < parameterTypes.Length; i++) {
-                if (wrapParameterType) {
-                    ilGenerator.Emit(OpCodes.Ldarg_0);
-                }
+            for (byte i = 0; i < parameterTypes.Length; i++) {                
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
                 if (wrapParameterType) {
-                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
+                    EmitCall(ilGenerator,OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
                     ReflectionHelper.CastClass(ilGenerator, parameterTypes[0], unwrappedParameterType);
                 }
             }
-            ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+            EmitCall(ilGenerator,OpCodes.Call, delegateType.GetMethod("Invoke"), null);
             if (wrapReturnType) {
-                ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                TypeOf(ilGenerator, returnType);
+                EmitCall(ilGenerator,OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
                 ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
@@ -278,6 +272,18 @@ namespace ReflectionFramework.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, tWrapper.GetMethod(wrapperMethodInfo.Name));            
         }
 
+        static MethodInfo getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle", BindingFlags.Public|BindingFlags.Static);
+        static void TypeOf(ILGenerator generator, Type type) {
+            generator.Emit(OpCodes.Ldtoken, type);
+            generator.Emit(OpCodes.Call, getTypeFromHandle);
+        }
+        static void EmitCall(ILGenerator generator, OpCode opCode, MethodInfo info, Type[] types) {
+            if (info.CallingConvention.HasFlag(CallingConventions.VarArgs))
+                generator.EmitCall(opCode, info, types);
+            else {
+                generator.Emit(opCode, info);
+            }
+        }
         static void Ldfld(ILGenerator generator, FieldBuilder fieldBuilder) {
             generator.Emit(OpCodes.Ldarg_0);
             generator.Emit(OpCodes.Ldfld, fieldBuilder);
@@ -294,8 +300,10 @@ namespace ReflectionFramework.Internal {
             List<FieldInfo> ctorInfos,
             List<object> ctorArgs, Type sourceType, FieldBuilder sourceObjectField,
             BaseReflectionGeneratorInstanceSetting setting, MemberInfoKind method, bool isStatic) {
-            var sourceMethodInfo = sourceType.GetMethod(GetTargetName(wrapperMethodInfo.Name, setting, method, baseMemberInfo ?? wrapperMethodInfo),
-                setting.GetBindingFlags(baseMemberInfo ?? wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0));
+            var sourceMethodIsInterface = GetIsInterface(setting, wrapperMethodInfo.Name, baseMemberInfo ?? wrapperMethodInfo);
+            var sourceMethodName = GetTargetName(wrapperMethodInfo.Name, setting, method, baseMemberInfo ?? wrapperMethodInfo);
+            var sourceMethodBindingFalgs = setting.GetBindingFlags(baseMemberInfo ?? wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0);
+            var sourceMethodInfo = (sourceMethodIsInterface ? sourceType.GetInterfaces() : FlatternType(sourceType, false)).Select(x => x.GetMethod(sourceMethodName, sourceMethodBindingFalgs)).FirstOrDefault(x => x != null);
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceMethodInfo.GetType(),
@@ -335,14 +343,10 @@ namespace ReflectionFramework.Internal {
             if (fallbackMode) {
                 PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
             } else {
-                if (wrapReturnType) {
-                    ilGenerator.Emit(OpCodes.Ldarg_0);
-                    ilGenerator.Emit(OpCodes.Ldtoken, returnType);
-                }                    
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 Ldfld(ilGenerator, fieldInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, sourceType);
-                ilGenerator.Emit(OpCodes.Ldtoken, delegateType);
+                TypeOf(ilGenerator, sourceType);
+                TypeOf(ilGenerator, delegateType);
                 ilGenerator.Emit(useTuple ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                 var methodInfo = ReflectionGeneratedObject.GetDelegateMethodInfo;
                 if (genericParameters.Length > 0) {
@@ -351,12 +355,12 @@ namespace ReflectionFramework.Internal {
                     for (var i = 0; i < genericParameters.Length; i++) {
                         ilGenerator.Emit(OpCodes.Dup);
                         ilGenerator.Emit(OpCodes.Ldc_I4, i);
-                        ilGenerator.Emit(OpCodes.Ldtoken, genericParameterBuilders[i]);
+                        TypeOf(ilGenerator, genericParameterBuilders[i]);
                         ilGenerator.Emit(OpCodes.Stelem_Ref);
                     }
                     methodInfo = ReflectionGeneratedObject.GetGenericDelegateMethodInfo;
                 }
-                ilGenerator.EmitCall(OpCodes.Call, methodInfo, null);
+                EmitCall(ilGenerator,OpCodes.Call, methodInfo, null);
             }
             ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             if (!isStatic) {
@@ -365,31 +369,31 @@ namespace ReflectionFramework.Internal {
             for (byte i = 0; i < updatedParameterTypes.Length; i++) {
                 var paramType = updatedParameterTypes[i];
                 if (parameterTypes[i] != updatedParameterTypes[i]) {
-                    ilGenerator.Emit(OpCodes.Ldarg_0);
                     ilGenerator.Emit(OpCodes.Ldarg, i + 1);
                     if (paramType.IsByRef)
                         LSTind(ilGenerator, paramType.GetElementType(), false);
-                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
+                    EmitCall(ilGenerator,OpCodes.Call, ReflectionGeneratedObject.UnwrapMethodInfo, null);
                 } else {
                     ilGenerator.Emit(OpCodes.Ldarg, i + 1);
                     if (paramType.IsByRef)
                         LSTind(ilGenerator, paramType.GetElementType(), false);
                 }                
             }
-            ilGenerator.EmitCall(OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+            EmitCall(ilGenerator,OpCodes.Call, delegateType.GetMethod("Invoke"), null);
 
             if (useTuple) {
                 SyncTupleItems(updatedParameterTypes.Select((x, i) => new Tuple<int, Type, Type>(i, x, parameterTypes[i])).Where(x => x.Item2.IsByRef),
                     unwrappedReturnTupe, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator, tupleLocalBuilder);
             }
             if (wrapReturnType) {
-                ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                TypeOf(ilGenerator, returnType);            
+                EmitCall(ilGenerator,OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
                 ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
 
             typeBuilder.DefineMethodOverride(methodBuilder, wrapperMethodInfo);
-        }
+        }        
 
         static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
             List<FieldInfo> ctorInfos, List<object> ctorArgs,
@@ -409,21 +413,18 @@ namespace ReflectionFramework.Internal {
             ilGenerator.Emit(OpCodes.Stloc, tupleLocalBuilder);
             if (skipFirst) {
                 ilGenerator.Emit(OpCodes.Ldloc, tupleLocalBuilder);
-                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, 0), null);
+                EmitCall(ilGenerator,OpCodes.Call, GetTupleItem(returnType, 0), null);
             }
             var tpls = tuples.ToArray();
             for (var i = 0; i < tpls.Length; i++) {
                 var tuple = tpls[i];
                 var value = (byte)tuple.Item1 + 1;
-                ilGenerator.Emit(OpCodes.Ldarg, value);
-                if (tuple.Item2 != tuple.Item3) {
-                    ilGenerator.Emit(OpCodes.Ldarg_0);
-                    ilGenerator.Emit(OpCodes.Ldtoken, tuple.Item3.GetElementType());
-                }                
+                ilGenerator.Emit(OpCodes.Ldarg, value);                
                 ilGenerator.Emit(OpCodes.Ldloc, tupleLocalBuilder);
-                ilGenerator.EmitCall(OpCodes.Call, GetTupleItem(returnType, i + index), null);
+                EmitCall(ilGenerator,OpCodes.Call, GetTupleItem(returnType, i + index), null);
                 if (tuple.Item2 != tuple.Item3) {
-                    ilGenerator.EmitCall(OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
+                    TypeOf(ilGenerator, tuple.Item3.GetElementType());
+                    EmitCall(ilGenerator,OpCodes.Call, ReflectionGeneratedObject.WrapMethodInfo, null);
                     ReflectionHelper.CastClass(ilGenerator, tuple.Item2.GetElementType(), tuple.Item3.GetElementType());
                 }
                 LSTind(ilGenerator, tuple.Item3.GetElementType(), true);
@@ -481,6 +482,9 @@ namespace ReflectionFramework.Internal {
             return type.GetMethod($"get_Item{i + 1}");
         }
 
+        bool GetIsInterface(BaseReflectionGeneratorInstanceSetting setting, string name, MemberInfo memberInfo) {
+            return setting.GetIsInterface(name, memberInfo);
+        }
         static string GetTargetName(string wrapperMethodInfo, BaseReflectionGeneratorInstanceSetting setting,
             MemberInfoKind kind, MemberInfo memberInfo) {
             var result = setting.GetName(wrapperMethodInfo, memberInfo);
