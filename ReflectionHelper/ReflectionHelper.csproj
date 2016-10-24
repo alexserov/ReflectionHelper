@@ -47,7 +47,6 @@
     <Compile Include="Helpers\FluentAPI\Internal.cs" />
     <Compile Include="Helpers\ReflectionHelperAssemblyKey.cs" />
     <Compile Include="Helpers\Settings.cs" />
-    <Compile Include="Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReflectionHelperExtensions.cs" />
     <Compile Include="ReflectionHelper.cs" />

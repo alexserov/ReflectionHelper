@@ -4,7 +4,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
     public interface IReflectionHelperInterfaceWrapper {

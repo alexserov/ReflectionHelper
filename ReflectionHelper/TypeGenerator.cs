@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
     internal enum MemberInfoKind {
@@ -61,8 +60,7 @@ namespace ReflectionFramework.Internal {
 
         object CreateImpl() {
             if (!CheckAssignableFromAttribute())
-                return CachedCreateInstance(null, null);
-            Log.Write($"Generating {tWrapper}");
+                return CachedCreateInstance(null, null);            
             var typeBuilder = moduleBuilder.DefineType(tWrapper.Name + Guid.NewGuid(),
                 TypeAttributes.Public,
                 typeof(ReflectionHelperInterfaceWrapper));
