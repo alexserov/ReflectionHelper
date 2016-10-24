@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 
 namespace ReflectionHelperTests {
@@ -30,37 +31,38 @@ namespace ReflectionHelperTests {
         string StringStringVisibility(ref string value1, ref Visibility value2);
         string StringStringVisibilityOutRef(out string value1, ref Visibility value2);
     }
+    [TestFixture]
     public class RefAndReturnTests {
-        [Fact]
+        [Test]
         public void StringStringTest() {
             var cl3 = new Class3();
             var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var result = wrapped.StringString(ref str);
-            Assert.Equal("abc", result);
-            Assert.Equal("def", str);
+            Assert.AreEqual("abc", result);
+            Assert.AreEqual("def", str);
         }
-        [Fact]
+        [Test]
         public void StringStringVisibility() {
             var cl3 = new Class3();
             var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var visib = Visibility.Collapsed;
             var result = wrapped.StringStringVisibility(ref str, ref visib);
-            Assert.Equal("abc", result);
-            Assert.Equal("def", str);
-            Assert.Equal(Visibility.Hidden, visib);
+            Assert.AreEqual("abc", result);
+            Assert.AreEqual("def", str);
+            Assert.AreEqual(Visibility.Hidden, visib);
         }
-        [Fact]
+        [Test]
         public void StringStringVisibilityOutRef() {
             var cl3 = new Class3();
             var wrapped = cl3.Wrap<IClass3>();
             var str = "some";
             var visib = Visibility.Collapsed;
             var result = wrapped.StringStringVisibilityOutRef(out str, ref visib);
-            Assert.Equal("abc", result);
-            Assert.Equal("def", str);
-            Assert.Equal(Visibility.Hidden, visib);
+            Assert.AreEqual("abc", result);
+            Assert.AreEqual("def", str);
+            Assert.AreEqual(Visibility.Hidden, visib);
         }
     }
 }

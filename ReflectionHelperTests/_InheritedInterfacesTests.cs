@@ -4,8 +4,9 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 namespace ReflectionHelperTests {
     public interface IParentInterface : IParentInterface2 {
@@ -39,16 +40,16 @@ namespace ReflectionHelperTests {
         }
     }
 
-
+    [TestFixture]
     public class InheritedInterfacesTests {
-        [Fact]
+        [Test]
         public void Test() {
             var tc = new InheritedInterfacesTestClass();
             var w = tc.Wrap<IChildInterface>();
-            Assert.Equal("Hello", w.Prop1);
-            Assert.Equal("World", w.Prop2);
-            Assert.Equal("Hello", w.Method1());
-            Assert.Equal("World", w.Method2());
+            Assert.AreEqual("Hello", w.Prop1);
+            Assert.AreEqual("World", w.Prop2);
+            Assert.AreEqual("Hello", w.Method1());
+            Assert.AreEqual("World", w.Method2());
         }
     }
 }

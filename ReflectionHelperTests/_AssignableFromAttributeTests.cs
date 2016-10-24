@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 namespace ReflectionHelperTests {
     public class AFA_Class1 {
@@ -34,9 +35,9 @@ namespace ReflectionHelperTests {
     public interface IAFAWrapper {
         string Prop1 { get; set; }
     }
-
+    [TestFixture]
     public class AssignableFromAttributeTests {
-        [Fact]
+        [Test]
         public void Test() {
             Assert.Null(new AFA_Class1().Wrap<IAFAWrapper>());
             Assert.Null(new AFA_Class2().Wrap<IAFAWrapper>());

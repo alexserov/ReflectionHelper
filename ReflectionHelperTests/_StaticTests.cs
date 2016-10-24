@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 
 namespace ReflectionHelperTests {
@@ -26,11 +27,11 @@ namespace ReflectionHelperTests {
         string PublicMethod(string value);
         string PrivateMethod(string value);
     }
-
+    [TestFixture]
     public class StaticFluentAPITests {
-        [Fact]
+        [Test]
         public void Simple() {
-            var ti = ReflectionGenerator.DefineWrapper<StaticFulentAPITestObject, IFluentAPITestObject>()
+            var ti = ReflectionHelperExtensions.DefineWrapper<StaticFulentAPITestObject, IFluentAPITestObject>()
                 .DefineProperty(x => x.PrivateStringProperty)
                 .BindingFlags(BindingFlags.NonPublic)
                 .EndMember()
@@ -42,9 +43,9 @@ namespace ReflectionHelperTests {
                 .BindingFlags(BindingFlags.NonPublic | BindingFlags.Public)
                 .EndMember()
                 .Create();
-            Assert.Equal("hello", ti.PublicMethod("hello"));
+            Assert.AreEqual("hello", ti.PublicMethod("hello"));
             ti.stringField = "hello";
-            Assert.Equal("hello", ti.stringField);
+            Assert.AreEqual("hello", ti.stringField);
         }
     }
 }

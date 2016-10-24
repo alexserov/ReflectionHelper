@@ -4,15 +4,15 @@ using System.Reflection;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
-    internal abstract class BaseReflectionGeneratorInstanceSetting {
-        readonly BaseReflectionGeneratorInstance reflectionGeneratorInstance;
+    internal abstract class BaseReflectionHelperInterfaceWrapperSetting {
+        readonly BaseReflectionHelperInterfaceWrapperGenerator reflectionHelperInterfaceWrapperGenerator;
 
-        public BaseReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) {
-            this.reflectionGeneratorInstance = reflectionGeneratorInstance;
+        public BaseReflectionHelperInterfaceWrapperSetting(BaseReflectionHelperInterfaceWrapperGenerator reflectionHelperInterfaceWrapperGenerator) {
+            this.reflectionHelperInterfaceWrapperGenerator = reflectionHelperInterfaceWrapperGenerator;
         }
 
         TAttribute GetAttribute<TAttribute>() {
-            return reflectionGeneratorInstance.tWrapper.GetCustomAttributes(typeof(TAttribute), true).OfType<TAttribute>().FirstOrDefault();
+            return reflectionHelperInterfaceWrapperGenerator.tWrapper.GetCustomAttributes(typeof(TAttribute), true).OfType<TAttribute>().FirstOrDefault();
         }
         TAttribute GetAttribute<TAttribute>(MemberInfo memberInfo) {
             if (memberInfo == null)
@@ -26,7 +26,7 @@ namespace ReflectionFramework {
                 return attr.Flags;
             if (GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo) != null)
                 return BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
-            return reflectionGeneratorInstance.defaultFlags;
+            return reflectionHelperInterfaceWrapperGenerator.defaultFlags;
         }
 
         internal virtual bool GetIsInterface(string name, MemberInfo memberInfo) {
@@ -54,9 +54,9 @@ namespace ReflectionFramework {
         public abstract int ComputeKey();
     }
 
-    internal class ReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
-        public ReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance)
-            : base(reflectionGeneratorInstance) {}
+    internal class ReflectionHelperInterfaceWrapperSetting : BaseReflectionHelperInterfaceWrapperSetting {
+        public ReflectionHelperInterfaceWrapperSetting(BaseReflectionHelperInterfaceWrapperGenerator reflectionHelperInterfaceWrapperGenerator)
+            : base(reflectionHelperInterfaceWrapperGenerator) {}
 
         public BindingFlags? BindingFlags { get; set; }
         public string Name { get; set; }
@@ -114,8 +114,8 @@ namespace ReflectionFramework {
         }
     }
 
-    internal class NullReflectionGeneratorInstanceSetting : BaseReflectionGeneratorInstanceSetting {
-        public NullReflectionGeneratorInstanceSetting(BaseReflectionGeneratorInstance reflectionGeneratorInstance) : base(reflectionGeneratorInstance) {}
+    internal class NullReflectionHelperInterfaceWrapperSetting : BaseReflectionHelperInterfaceWrapperSetting {
+        public NullReflectionHelperInterfaceWrapperSetting(BaseReflectionHelperInterfaceWrapperGenerator reflectionHelperInterfaceWrapperGenerator) : base(reflectionHelperInterfaceWrapperGenerator) {}
         public override int ComputeKey() {
             return 0;
         }

@@ -7,11 +7,11 @@ using System.Runtime.CompilerServices;
 using ReflectionHelper;
 
 namespace ReflectionFramework.Internal {
-    public interface IReflectionGeneratedObject {
+    public interface IReflectionHelperInterfaceWrapper {
         object Source { get; }
     }
 
-    public class ReflectionGeneratedObject : IReflectionGeneratedObject {
+    public class ReflectionHelperInterfaceWrapper : IReflectionHelperInterfaceWrapper {
         const int CallsToCleanup = 100;
         class WeakReference<T> where T : class {
             WeakReference impl;
@@ -158,7 +158,7 @@ namespace ReflectionFramework.Internal {
         static readonly Dictionary<LocalGenericDelegateCacheKey, WeakReference<Delegate>> globalGenericDelegateCache;
         static readonly Dictionary<LocalDelegateCacheKey, WeakReference<Delegate>> globalDelegateCache;
 
-        static ReflectionGeneratedObject() {
+        static ReflectionHelperInterfaceWrapper() {
             globalFieldGetterCache = new Dictionary<LocalFieldCacheKey, WeakReference<Delegate>>();
             globalFieldSetterCache = new Dictionary<LocalFieldCacheKey, WeakReference<Delegate>>();
             globalGenericDelegateCache = new Dictionary<LocalGenericDelegateCacheKey, WeakReference<Delegate>>();
@@ -178,18 +178,18 @@ namespace ReflectionFramework.Internal {
 
         object source;
 
-        public ReflectionGeneratedObject() {
+        public ReflectionHelperInterfaceWrapper() {
             localFieldGetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
             localFieldSetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
             localGenericDelegateCache = new Dictionary<LocalGenericDelegateCacheKey, Delegate>();
             localDelegateCache = new Dictionary<LocalDelegateCacheKey, Delegate>();
         }
 
-        public ReflectionGeneratedObject(object source) : this() {
+        public ReflectionHelperInterfaceWrapper(object source) : this() {
             this.source = source;
         }
 
-        static MethodInfo GetMethodInfo(Expression<Action<ReflectionGeneratedObject>> expr) {
+        static MethodInfo GetMethodInfo(Expression<Action<ReflectionHelperInterfaceWrapper>> expr) {
             return (expr.Body as MethodCallExpression).Method;
         }
 
@@ -309,16 +309,16 @@ namespace ReflectionFramework.Internal {
             DoNotRemove(wrapperType);
             if (obj == null)
                 return null;
-            return ReflectionGenerator.Wrap(obj, wrapperType);
+            return ReflectionHelperExtensions.Wrap(obj, wrapperType);
         }
-        public static object Unwrap(ReflectionGeneratedObject wrapper) {
+        public static object Unwrap(ReflectionHelperInterfaceWrapper wrapper) {
             DoNotRemove(wrapper);
             if(wrapper==null)
                 return null;
             return wrapper.source;
         }
 
-        object IReflectionGeneratedObject.Source {
+        object IReflectionHelperInterfaceWrapper.Source {
             get { return source; }
         }
     }

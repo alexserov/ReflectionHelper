@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 
 namespace ReflectionHelperTests {
@@ -85,156 +86,156 @@ namespace ReflectionHelperTests {
         void _DateTime(out DateTime value);
         void _Visibility(out Visibility value);
     }
-
+    [TestFixture]
     public class OutTests {
-        [Fact]
+        [Test]
         public void _Boolean() {
             //value = true;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Boolean value = false;
             wrapped._Boolean(out value);
-            Assert.Equal(true, value);
+            Assert.AreEqual(true, value);
         }
 
-        [Fact]
+        [Test]
         public void _SByte() {
             //value = -10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             SByte value = 0;
             wrapped._SByte(out value);
-            Assert.Equal(-10, value);
+            Assert.AreEqual(-10, value);
         }
 
-        [Fact]
+        [Test]
         public void _Byte() {
             //value = 10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Byte value = 0;
             wrapped._Byte(out value);
-            Assert.Equal(10, value);
+            Assert.AreEqual(10, value);
         }
 
-        [Fact]
+        [Test]
         public void _Char() {
             //value = 'z';
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Char value = '0';
             wrapped._Char(out value);
-            Assert.Equal('z', value);
+            Assert.AreEqual('z', value);
         }
 
-        [Fact]
+        [Test]
         public void _UInt16() {
             //value = 10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             UInt16 value = 0;
             wrapped._UInt16(out value);
-            Assert.Equal(10, value);
+            Assert.AreEqual(10, value);
         }
 
-        [Fact]
+        [Test]
         public void _Int16() {
             //value = -10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Int16 value = 0;
             wrapped._Int16(out value);
-            Assert.Equal(-10, value);
+            Assert.AreEqual(-10, value);
         }
 
-        [Fact]
+        [Test]
         public void _UInt32() {
             //value = 10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             UInt32 value = 0;
             wrapped._UInt32(out value);            
-            Assert.Equal(10u, value);
+            Assert.AreEqual(10u, value);
         }
 
-        [Fact]
+        [Test]
         public void _Int32() {
             //value = -10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Int32 value = 0;
             wrapped._Int32(out value);
-            Assert.Equal(-10, value);
+            Assert.AreEqual(-10, value);
         }
 
-        [Fact]
+        [Test]
         public void _UInt64() {
             //value = 10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             UInt64 value = 0;
             wrapped._UInt64(out value);
-            Assert.Equal(10u, value);
+            Assert.AreEqual(10u, value);
         }
 
-        [Fact]
+        [Test]
         public void _Int64() {
             //value = -10;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Int64 value = 0;
             wrapped._Int64(out value);
-            Assert.Equal(-10, value);
+            Assert.AreEqual(-10, value);
         }
 
-        [Fact]
+        [Test]
         public void _Single() {
             //value = 10f;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Single value = 0;
             wrapped._Single(out value);
-            Assert.Equal(10f, value);
+            Assert.AreEqual(10f, value);
         }
 
-        [Fact]
+        [Test]
         public void _Double() {
             //value = 10d;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Double value = 0;
             wrapped._Double(out value);
-            Assert.Equal(10d, value);
+            Assert.AreEqual(10d, value);
         }
 
-        [Fact]
+        [Test]
         public void _String() {
             //value = "z";
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             String value = "0";
             wrapped._String(out value);
-            Assert.Equal("z", value);
+            Assert.AreEqual("z", value);
         }
 
-        [Fact]
+        [Test]
         public void _DateTime() {
             //value = new DateTime(2000, 01, 01);
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             DateTime value = DateTime.Now;
             wrapped._DateTime(out value);
-            Assert.Equal(new DateTime(2000, 01, 01), value);
+            Assert.AreEqual(new DateTime(2000, 01, 01), value);
         }
 
-        [Fact]
+        [Test]
         public void _Visibility() {
             //value = Visibility.Hidden;
             var cl2 = new Class4();
             var wrapped = cl2.Wrap<IClass4>();
             Visibility value = Visibility.Visible;
             wrapped._Visibility(out value);
-            Assert.Equal(Visibility.Hidden, value);
+            Assert.AreEqual(Visibility.Hidden, value);
         }
     }
 }

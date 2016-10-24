@@ -4,9 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 namespace ReflectionHelperTests {
     class AttributesTestObject {
@@ -40,23 +40,23 @@ namespace ReflectionHelperTests {
         [ReflectionHelperAttributes.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)]
         string Method3();
     }
-
+    [TestFixture]
     public class AttributesTests {
-        [Fact]
+        [Test]
         public void Test() {
             var to = new AttributesTestObject();
             var w = to.Wrap<IAttributesTestObject>();
 
-            Assert.Equal("Prop1", w.Prop100);
-            Assert.Equal("prop2", w.Prop12);
+            Assert.AreEqual("Prop1", w.Prop100);
+            Assert.AreEqual("prop2", w.Prop12);
             w.Prop100 = "hello";
             w.Prop12 = "world";
 
-            Assert.Equal("hello", w.Prop100);
-            Assert.Equal("world", w.Prop12);
+            Assert.AreEqual("hello", w.Prop100);
+            Assert.AreEqual("world", w.Prop12);
 
-            Assert.Equal("hello", w.Method2());
-            Assert.Equal("world", w.Method3());
+            Assert.AreEqual("hello", w.Method2());
+            Assert.AreEqual("world", w.Method3());
         }
     }
 }

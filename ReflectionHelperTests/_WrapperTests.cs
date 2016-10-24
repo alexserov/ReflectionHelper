@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 
 namespace ReflectionHelperTests {
@@ -71,45 +71,45 @@ namespace ReflectionHelperTests {
         void Method6(ref ISomeClass1 value);
         string Method7(ref ISomeClass1 value);
     }
-
+    [TestFixture]
     public class WrapperTests {
-        [Fact]
+        [Test]
         public void FieldsTest() {
             var sc2 = new SomeClass2();
             var sc2W = sc2.Wrap<ISomeClass2>();
             Assert.NotNull(sc2W.field);
-            Assert.Equal("Hello", sc2W.field.Prop1);
+            Assert.AreEqual("Hello", sc2W.field.Prop1);
             sc2W.field = new SomeClass1() {Prop1 = "World"}.Wrap<ISomeClass1>();
-            Assert.Equal("World", sc2W.field.Prop1);
-            Assert.Equal("World", sc2W.Property.Prop1);
-            Assert.Equal("World", sc2W.Method().Prop1);
+            Assert.AreEqual("World", sc2W.field.Prop1);
+            Assert.AreEqual("World", sc2W.Property.Prop1);
+            Assert.AreEqual("World", sc2W.Method().Prop1);
             sc2W.Method2(new SomeClass1() {Prop1 = "Value1"}.Wrap<ISomeClass1>());
-            Assert.Equal("Value1", sc2W.Property.Prop1);
+            Assert.AreEqual("Value1", sc2W.Property.Prop1);
             var old = sc2W.Method3(new SomeClass1() {Prop1 = "Value2"}.Wrap<ISomeClass1>());
-            Assert.Equal("Value1", old.Prop1);
-            Assert.Equal("Value2", sc2W.Property.Prop1);
+            Assert.AreEqual("Value1", old.Prop1);
+            Assert.AreEqual("Value2", sc2W.Property.Prop1);
         }
-        [Fact]
+        [Test]
         public void OutTest() {
             var sc2 = new SomeClass2();
             var sc2W = sc2.Wrap<ISomeClass2>();
             ISomeClass1 value;
             sc2W.Method4(out value);
-            Assert.Equal("Method4", value.Prop1);
+            Assert.AreEqual("Method4", value.Prop1);
             
-            Assert.Equal("Hello", sc2W.Method5(out value));
-            Assert.Equal("Method5", value.Prop1);
+            Assert.AreEqual("Hello", sc2W.Method5(out value));
+            Assert.AreEqual("Method5", value.Prop1);
         }
-        [Fact]
+        [Test]
         public void RefTest() {
             var sc2 = new SomeClass2();
             var sc2W = sc2.Wrap<ISomeClass2>();
             ISomeClass1 value = new SomeClass1().Wrap<ISomeClass1>();
             sc2W.Method6(ref value);
-            Assert.Equal("Method6", value.Prop1);
+            Assert.AreEqual("Method6", value.Prop1);
 
-            Assert.Equal("Hello", sc2W.Method7(ref value));
-            Assert.Equal("Method7", value.Prop1);
+            Assert.AreEqual("Hello", sc2W.Method7(ref value));
+            Assert.AreEqual("Method7", value.Prop1);
         }
     }
 }

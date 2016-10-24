@@ -15,6 +15,6 @@ namespace ReflectionHelperTests {
             Method2(new object(), typeof(string));
         }
         public  void Method2(object obj, Type t) { }
-        //public Fakes() { ReflectionFramework.ReflectionGenerator }
+        //public Fakes() { ReflectionFramework.ReflectionHelperExtensions }
     }
 }

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using NUnit.Framework;
 using ReflectionFramework;
-using Xunit;
+
 
 namespace ReflectionHelperTests {
     public interface ISomeInterface {
@@ -26,13 +26,13 @@ namespace ReflectionHelperTests {
         [ReflectionHelperAttributes.InterfaceMember(typeof(ISomeInterface))]
         int Method();
     }
-
+    [TestFixture]
     public class InterfaceTests {
-        [Fact]
+        [Test]
         public void Test() {
             var sc = new SomeClass();
             var isc = sc.Wrap<ISomeClass>();
-            Assert.Equal(2, isc.Method());
+            Assert.AreEqual(2, isc.Method());
         }
     }
 }
