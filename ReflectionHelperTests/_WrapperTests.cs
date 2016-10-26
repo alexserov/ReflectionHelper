@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using ReflectionFramework;
-
+using ReflectionFramework.Extensions;
 
 
 namespace ReflectionHelperTests {
@@ -52,14 +52,14 @@ namespace ReflectionHelperTests {
             return Property.Prop1;
         }
     }
-    [ReflectionHelperAttributes.Wrapper]
+    [ReflectionFramework.Attributes.Wrapper]
     public interface ISomeClass1 {
         string Prop1 { get; set; }
     }
 
-    [ReflectionHelperAttributes.Wrapper]
+    [ReflectionFramework.Attributes.Wrapper]
     public interface ISomeClass2 {
-        [ReflectionHelperAttributes.FieldAccessor]
+        [ReflectionFramework.Attributes.FieldAccessor]
         ISomeClass1 field { get; set; }
 
         ISomeClass1 Property { get; }

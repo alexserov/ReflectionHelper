@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NUnit.Framework.Internal;
 using NUnit.Framework;
 using ReflectionFramework;
+using ReflectionFramework.Extensions;
 
 namespace ReflectionHelperTests
 {

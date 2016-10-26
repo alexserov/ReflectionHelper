@@ -5,6 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Security;
+using ReflectionFramework.Attributes;
 
 namespace ReflectionFramework.Internal {
     internal enum MemberInfoKind {
@@ -33,11 +35,22 @@ namespace ReflectionFramework.Internal {
             }
         }
 
-        protected static readonly Dictionary<InstanceCacheKey, Func<object, object>> CachedConstructors;
+        protected static readonly Dictionary<InstanceCacheKey, Func<object, object>> CachedConstructors;        
 
         static BaseReflectionHelperInterfaceWrapperGenerator() {
-            CachedConstructors = new Dictionary<InstanceCacheKey, Func<object, object>>();
+            CachedConstructors = new Dictionary<InstanceCacheKey, Func<object, object>>();            
+            SubscribeTypeResolve();
         }
+
+        [SecuritySafeCritical]
+        static void SubscribeTypeResolve() {
+            AppDomain.CurrentDomain.TypeResolve += CurrentDomain_TypeResolve;
+        }
+        private static Assembly CurrentDomain_TypeResolve(object sender, ResolveEventArgs args)
+        {
+            return null;            
+        }
+
         protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
         protected internal Type tWrapper;
         protected internal BaseReflectionHelperInterfaceWrapperGenerator(ModuleBuilder builder, object element, bool isStatic, Type tWrapper) {
@@ -47,7 +60,7 @@ namespace ReflectionFramework.Internal {
                 elementType = (Type)element;
             } else {
                 this.element = element;
-                elementType = this.element?.GetType();
+                elementType = this.element != null ? this.element.GetType() : null;
             }
             moduleBuilder = builder;
             this.isStatic = isStatic;
@@ -68,10 +81,10 @@ namespace ReflectionFramework.Internal {
             typeBuilder.AddInterfaceImplementation(tWrapper);
             var sourceType = elementType;
             var ctorArgs = new List<object>();
-            var ctorInfos = new List<FieldInfo>();
-            var sourceObjectField = typeBuilder.DefineField("fieldSourceObject", sourceType, FieldAttributes.Family);
+            var ctorInfos = new List<FieldInfo>();            
+            var sourceObjectField = typeBuilder.DefineField("fieldSourceObject", typeof(object), FieldAttributes.Private);
             ctorInfos.Add(sourceObjectField);
-            ctorArgs.Add(element);
+            ctorArgs.Add(element);            
 
             foreach (var wrapperMethodInfo in GetMethods()) {
                 if (wrapperMethodInfo.IsSpecialName)
@@ -100,7 +113,7 @@ namespace ReflectionFramework.Internal {
                             sourceObjectField, setting, MemberInfoKind.PropertySetter, isStatic);
             }
             var ctor = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
-                ctorInfos.Select(x => x.FieldType).ToArray());
+                ctorInfos.Select(x => typeof(object)).ToArray());
             var ctorIlGenerator = ctor.GetILGenerator();
             ctorIlGenerator.Emit(OpCodes.Ldarg_0);
             ctorIlGenerator.Emit(OpCodes.Ldarg_1);
@@ -114,10 +127,9 @@ namespace ReflectionFramework.Internal {
 
             var result = typeBuilder.CreateType();
             return CachedCreateInstance(result, ctorArgs);
-        }
-
+        }        
         bool CheckAssignableFromAttribute() {
-            var assignableFrom = IterateInterfaces().SelectMany(x=>x.GetCustomAttributes(typeof(ReflectionHelperAttributes.AssignableFromAttribute), true)).Distinct().OfType<ReflectionHelperAttributes.AssignableFromAttribute>();
+            var assignableFrom = IterateInterfaces().SelectMany(x=>x.GetCustomAttributes(typeof(AssignableFromAttribute), true)).Distinct().OfType<AssignableFromAttribute>();
             var assignable = assignableFrom.Where(x => !x.Inverse).Select(x=>x.GetTypeName()).ToList();
             var unassignable = assignableFrom.Where(x => x.Inverse).Select(x => x.GetTypeName()).ToList();
             var tEnumerator = FlatternType(ElementType, true).GetEnumerator();
@@ -197,11 +209,11 @@ namespace ReflectionFramework.Internal {
             BaseReflectionHelperInterfaceWrapperSetting setting, MemberInfoKind method, bool isStatic) {
             var sourceFieldInfo =
                 sourceType.GetField(GetTargetName(propertyInfo.Name, setting, MemberInfoKind.Method, propertyInfo),
-                    setting.GetBindingFlags(wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0));
+                    setting.GetBindingFlags(wrapperMethodInfo, propertyInfo) | (isStatic ? BindingFlags.Static : 0));
             FieldBuilder fieldInfo = null;
             if (sourceFieldInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceFieldInfo.GetType(),
-                    FieldAttributes.Family);
+                    FieldAttributes.Private);
                 ctorInfos.Add(fieldInfo);
                 ctorArgs.Add(sourceFieldInfo);
             }
@@ -235,7 +247,7 @@ namespace ReflectionFramework.Internal {
                 Ldfld(ilGenerator, fieldInfo);
                 TypeOf(ilGenerator, delegateType);
                 TypeOf(ilGenerator, typeof(object));
-                if (wrapParameterType)
+                if (wrapParameterType || wrapReturnType)
                     TypeOf(ilGenerator, typeof(object));
                 else
                     TypeOf(ilGenerator, sourceFieldInfo.FieldType);
@@ -248,7 +260,6 @@ namespace ReflectionFramework.Internal {
                         ? ReflectionHelperInterfaceWrapper.GetFieldGetterMethodInfo
                         : ReflectionHelperInterfaceWrapper.GetFieldSetterMethodInfo, null);
             }
-            ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);            
             if (!isStatic) {
                 Ldfld(ilGenerator, sourceObjectField);
             }
@@ -256,14 +267,12 @@ namespace ReflectionFramework.Internal {
                 ilGenerator.Emit(OpCodes.Ldarg, i + 1);
                 if (wrapParameterType) {
                     EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.UnwrapMethodInfo, null);
-                    ReflectionHelper.CastClass(ilGenerator, parameterTypes[0], unwrappedParameterType);
                 }
             }
             EmitCall(ilGenerator,OpCodes.Call, delegateType.GetMethod("Invoke"), null);
             if (wrapReturnType) {
                 TypeOf(ilGenerator, returnType);
                 EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.WrapMethodInfo, null);
-                ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
 
@@ -290,7 +299,7 @@ namespace ReflectionFramework.Internal {
         static bool ShouldWrapType(Type type) {
             if(type.IsByRef)
                 return ShouldWrapType(type.GetElementType());
-            return type.GetCustomAttributes(typeof(ReflectionHelperAttributes.WrapperAttribute), false).Any();
+            return type.GetCustomAttributes(typeof(WrapperAttribute), false).Any();
         }
 
         static readonly Type tpObject = typeof(object).Assembly.GetType(typeof(object).FullName + "&");
@@ -300,12 +309,12 @@ namespace ReflectionFramework.Internal {
             BaseReflectionHelperInterfaceWrapperSetting setting, MemberInfoKind method, bool isStatic) {
             var sourceMethodIsInterface = GetIsInterface(setting, wrapperMethodInfo.Name, baseMemberInfo ?? wrapperMethodInfo);
             var sourceMethodName = GetTargetName(wrapperMethodInfo.Name, setting, method, baseMemberInfo ?? wrapperMethodInfo);
-            var sourceMethodBindingFalgs = setting.GetBindingFlags(baseMemberInfo ?? wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0);
+            var sourceMethodBindingFalgs = setting.GetBindingFlags(baseMemberInfo, wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0);
             var sourceMethodInfo = (sourceMethodIsInterface ? sourceType.GetInterfaces() : FlatternType(sourceType, false)).Select(x => x.GetMethod(sourceMethodName, sourceMethodBindingFalgs)).FirstOrDefault(x => x != null);
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceMethodInfo.GetType(),
-                    FieldAttributes.Family);
+                    FieldAttributes.Private);
                 ctorInfos.Add(fieldInfo);
                 ctorArgs.Add(sourceMethodInfo);
             }
@@ -360,7 +369,6 @@ namespace ReflectionFramework.Internal {
                 }
                 EmitCall(ilGenerator,OpCodes.Call, methodInfo, null);
             }
-            ReflectionHelper.CastClass(ilGenerator, typeof(Delegate), delegateType);
             if (!isStatic) {
                 Ldfld(ilGenerator, sourceObjectField);
             }
@@ -381,12 +389,11 @@ namespace ReflectionFramework.Internal {
 
             if (useTuple) {
                 SyncTupleItems(updatedParameterTypes.Select((x, i) => new Tuple<int, Type, Type>(i, x, parameterTypes[i])).Where(x => x.Item2.IsByRef),
-                    unwrappedReturnTupe, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator, tupleLocalBuilder);
+                    unwrappedReturnTupe, wrapperMethodInfo.ReturnType != typeof(void), ilGenerator, tupleLocalBuilder, typeBuilder);
             }
             if (wrapReturnType) {
                 TypeOf(ilGenerator, returnType);            
                 EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.WrapMethodInfo, null);
-                ReflectionHelper.CastClass(ilGenerator, typeof(object), returnType);
             }
             ilGenerator.Emit(OpCodes.Ret);
 
@@ -398,7 +405,7 @@ namespace ReflectionFramework.Internal {
             BaseReflectionHelperInterfaceWrapperSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind) {
             var fallback = setting.GetFallback(infoKind);
             var fallbackField = typeBuilder.DefineField("field" + wrapperMethodInfo.Name + "fallback",
-                fallback.GetType(), FieldAttributes.Family);
+                fallback.GetType(), FieldAttributes.Private);
             ctorInfos.Add(fallbackField);
             ctorArgs.Add(fallback);
             Ldfld(ilGenerator, fallbackField);
@@ -406,7 +413,7 @@ namespace ReflectionFramework.Internal {
 
 
         static void SyncTupleItems(IEnumerable<Tuple<int, Type, Type>> tuples, Type returnType, bool skipFirst,
-            ILGenerator ilGenerator, LocalBuilder tupleLocalBuilder) {
+            ILGenerator ilGenerator, LocalBuilder tupleLocalBuilder, TypeBuilder typeBuilder) {
             var index = skipFirst ? 1 : 0;
             ilGenerator.Emit(OpCodes.Stloc, tupleLocalBuilder);
             if (skipFirst) {
@@ -423,7 +430,6 @@ namespace ReflectionFramework.Internal {
                 if (tuple.Item2 != tuple.Item3) {
                     TypeOf(ilGenerator, tuple.Item3.GetElementType());
                     EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.WrapMethodInfo, null);
-                    ReflectionHelper.CastClass(ilGenerator, tuple.Item2.GetElementType(), tuple.Item3.GetElementType());
                 }
                 LSTind(ilGenerator, tuple.Item3.GetElementType(), true);
             }
@@ -477,7 +483,7 @@ namespace ReflectionFramework.Internal {
         }
 
         static MethodInfo GetTupleItem(Type type, int i) {
-            return type.GetMethod($"get_Item{i + 1}");
+            return type.GetMethod(String.Format("get_Item{0}", i + 1));
         }
 
         bool GetIsInterface(BaseReflectionHelperInterfaceWrapperSetting setting, string name, MemberInfo memberInfo) {

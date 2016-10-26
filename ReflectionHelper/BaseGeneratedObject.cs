@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using ReflectionFramework.Extensions;
 
 namespace ReflectionFramework.Internal {
     public interface IReflectionHelperInterfaceWrapper {
@@ -39,7 +40,7 @@ namespace ReflectionFramework.Internal {
             public GlobalCacheKey(TLocalKey value) {
                 Key = value;
             }
-            TLocalKey Key { get; }         
+            TLocalKey Key { get; set; }         
         }
 
         struct LocalFieldCacheKey {
@@ -176,7 +177,6 @@ namespace ReflectionFramework.Internal {
         readonly Dictionary<LocalDelegateCacheKey, Delegate> localDelegateCache;
 
         object source;
-
         public ReflectionHelperInterfaceWrapper() {
             localFieldGetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
             localFieldSetterCache = new Dictionary<LocalFieldCacheKey, Delegate>();
@@ -251,8 +251,7 @@ namespace ReflectionFramework.Internal {
                     dictionary.Remove(key);
                 }
             }
-        }
-
+        }        
         public Delegate GetFieldGetter(FieldInfo info, Type delegateType, Type tElement, Type tField,
             bool addThisArgForStatic) {
             Delegate result;

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using ReflectionFramework;
+using ReflectionFramework.Extensions;
 
 
 namespace ReflectionHelperTests {
@@ -26,18 +27,18 @@ namespace ReflectionHelperTests {
     }
 
     public interface IAttributesTestObject {
-        [ReflectionHelperAttributes.Name("Prop1")]
+        [ReflectionFramework.Attributes.Name("Prop1")]
         string Prop100 { get; set; }
 
-        [ReflectionHelperAttributes.Name("prop2")]
-        [ReflectionHelperAttributes.FieldAccessor]
+        [ReflectionFramework.Attributes.Name("prop2")]
+        [ReflectionFramework.Attributes.FieldAccessor]
         string Prop12 { get; set; }
 
-        [ReflectionHelperAttributes.Name("Method1")]
+        [ReflectionFramework.Attributes.Name("Method1")]
         string Method2();
 
-        [ReflectionHelperAttributes.Name("Method2")]
-        [ReflectionHelperAttributes.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)]
+        [ReflectionFramework.Attributes.Name("Method2")]
+        [ReflectionFramework.Attributes.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)]
         string Method3();
     }
     [TestFixture]

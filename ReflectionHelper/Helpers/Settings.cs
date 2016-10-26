@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
@@ -20,20 +21,20 @@ namespace ReflectionFramework {
             return memberInfo.GetCustomAttributes(typeof(TAttribute), true).OfType<TAttribute>().FirstOrDefault();
         }
 
-        internal virtual BindingFlags GetBindingFlags(MemberInfo memberInfo) {            
-            var attr = GetAttribute<ReflectionHelperAttributes.BindingFlagsAttribute>(memberInfo) ?? GetAttribute<ReflectionHelperAttributes.BindingFlagsAttribute>();
+        internal virtual BindingFlags GetBindingFlags(MemberInfo primaryMethodInfo, MemberInfo secondaryMemberInfo) {            
+            var attr = GetAttribute<BindingFlagsAttribute>(primaryMethodInfo) ?? GetAttribute<BindingFlagsAttribute>(secondaryMemberInfo) ?? GetAttribute<BindingFlagsAttribute>();
             if (attr != null)
                 return attr.Flags;
-            if (GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo) != null)
+            if (GetAttribute<InterfaceMemberAttribute>(primaryMethodInfo) != null)
                 return BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
             return reflectionHelperInterfaceWrapperGenerator.defaultFlags;
         }
 
         internal virtual bool GetIsInterface(string name, MemberInfo memberInfo) {
-            return GetAttribute<ReflectionHelperAttributes.InterfaceMemberAttribute>(memberInfo)!=null;
+            return GetAttribute<InterfaceMemberAttribute>(memberInfo)!=null;
         }
         internal virtual string GetName(string defaultName, MemberInfo memberInfo) {
-            var attr = GetAttribute<ReflectionHelperAttributes.NameAttribute>(memberInfo);
+            var attr = GetAttribute<NameAttribute>(memberInfo);
             if (attr != null)
                 return attr.Name;
             
@@ -41,7 +42,7 @@ namespace ReflectionFramework {
         }
 
         internal virtual bool FieldAccessor(MemberInfo memberInfo) {
-            var attr = GetAttribute<ReflectionHelperAttributes.FieldAccessorAttribute>(memberInfo);
+            var attr = GetAttribute<FieldAccessorAttribute>(memberInfo);
             if (attr != null)
                 return true;
             return false;
@@ -66,8 +67,8 @@ namespace ReflectionFramework {
         public Delegate SetterFallbackAction { get; set; }
         public string InterfaceName { get; set; }
 
-        internal override BindingFlags GetBindingFlags(MemberInfo wrapperMethodInfo) {
-            return BindingFlags ?? base.GetBindingFlags(wrapperMethodInfo);
+        internal override BindingFlags GetBindingFlags(MemberInfo primaryMethodInfo, MemberInfo secondaryMemberInfo) {
+            return BindingFlags ?? base.GetBindingFlags(primaryMethodInfo, secondaryMemberInfo);
         }
 
         internal override string GetName(string defaultName, MemberInfo memberInfo) {
@@ -95,7 +96,7 @@ namespace ReflectionFramework {
                     result = SetterFallbackAction;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(infoKind), infoKind, null);
+                    throw new ArgumentOutOfRangeException("infoKind", infoKind, null);
             }
             return result ?? base.GetFallback(infoKind);
         }

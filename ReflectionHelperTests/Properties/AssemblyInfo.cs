@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ReflectionFramework;
+using ReflectionFramework.Extensions;
 using ReflectionFramework.Internal;
 
 

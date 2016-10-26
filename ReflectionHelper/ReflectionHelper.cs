@@ -11,8 +11,8 @@ namespace ReflectionFramework {
             PropertyTypeInfo = new Dictionary<HelperKey, Type>();
         }
 
-        Dictionary<HelperKey, object> InvokeInfo { get; }
-        Dictionary<HelperKey, Type> PropertyTypeInfo { get; }
+        Dictionary<HelperKey, object> InvokeInfo { get; set; }
+        Dictionary<HelperKey, Type> PropertyTypeInfo { get; set; }
 
         public bool HasContent {
             get { return InvokeInfo.Count > 0; }
@@ -64,17 +64,21 @@ namespace ReflectionFramework {
             return type.GetMethod(methodName, bindingFlags);
         }
 
-
-        internal static void CastClass(ILGenerator generator, Type sourceType, Type targetType) {
+        internal static bool ShouldCastClass(Type sourceType, Type targetType) {
             if (Equals(null, targetType))
-                return;
+                return false;
             if (sourceType == targetType)
-                return;
+                return false;
             var oneIsVoid = typeof(void) == sourceType || typeof(void) == targetType;
             var sourceIsNull = Equals(null, sourceType);
             if (oneIsVoid && !sourceIsNull)
                 throw new InvalidOperationException(string.Format("Cast from {0} to {1} is not supported", sourceType,
                     targetType));
+            return true;
+        }
+        internal static void CastClass(ILGenerator generator, Type sourceType, Type targetType) {
+            if (!ShouldCastClass(sourceType, targetType))
+                return;
             if (Equals(null, sourceType)) {
                 if (targetType.IsClass)
                     generator.Emit(OpCodes.Castclass, targetType);
@@ -260,6 +264,28 @@ namespace ReflectionFramework {
             return resultType.MakeGenericType(lst.ToArray());
         }
 
+        internal static Type MakeStubGenericDelegate(bool hasReturnType, params Type[] genericParameters) {
+            Type resultType;
+            switch (genericParameters.Length) {
+                case 0:
+                    return typeof(Action);
+                case 1:
+                    resultType = hasReturnType ? typeof(Func<>) : typeof(Action<>);
+                    break;
+                case 2:
+                    resultType = hasReturnType ? typeof(Func<,>) : typeof(Action<,>);
+                    break;
+                case 3:
+                    resultType = hasReturnType ? typeof(Func<,,>) : typeof(Action<,,>);
+                break;
+                default:
+                    resultType = hasReturnType
+                        ? typeof(Func<>).Assembly.GetType(string.Format("System.Func`{0}", genericParameters.Length))
+                        : typeof(Func<>).Assembly.GetType(string.Format("System.Action`{0}", genericParameters.Length));
+                    break;
+            }            
+            return resultType.MakeGenericType(genericParameters);
+        }
         static Delegate CreateFieldGetterOrSetter<TElement, TField>(bool isGetter, Type delegateType,
             Type declaringType,
             string fieldName, BindingFlags bFlags) {

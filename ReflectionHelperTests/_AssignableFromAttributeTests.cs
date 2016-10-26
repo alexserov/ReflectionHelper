@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using ReflectionFramework;
+using ReflectionFramework.Extensions;
 
 
 namespace ReflectionHelperTests {
@@ -28,10 +29,10 @@ namespace ReflectionHelperTests {
 
     public interface IAFA_Interface2 {}
 
-    [ReflectionHelperAttributes.AssignableFrom(typeof(AFA_Class2))]
-    [ReflectionHelperAttributes.AssignableFrom(typeof(IAFA_Interface))]
-    [ReflectionHelperAttributes.AssignableFrom(typeof(Class3), Inverse = true)]
-    [ReflectionHelperAttributes.AssignableFrom(typeof(IAFA_Interface2), Inverse = true)]
+    [ReflectionFramework.Attributes.AssignableFrom(typeof(AFA_Class2))]
+    [ReflectionFramework.Attributes.AssignableFrom(typeof(IAFA_Interface))]
+    [ReflectionFramework.Attributes.AssignableFrom(typeof(Class3), Inverse = true)]
+    [ReflectionFramework.Attributes.AssignableFrom(typeof(IAFA_Interface2), Inverse = true)]
     public interface IAFAWrapper {
         string Prop1 { get; set; }
     }

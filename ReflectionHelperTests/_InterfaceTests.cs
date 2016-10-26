@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using ReflectionFramework;
+using ReflectionFramework.Extensions;
 
 
 namespace ReflectionHelperTests {
@@ -23,7 +24,7 @@ namespace ReflectionHelperTests {
     }
 
     public interface ISomeClass {
-        [ReflectionHelperAttributes.InterfaceMember(typeof(ISomeInterface))]
+        [ReflectionFramework.Attributes.InterfaceMember(typeof(ISomeInterface))]
         int Method();
     }
     [TestFixture]

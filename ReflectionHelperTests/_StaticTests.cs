@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using NUnit.Framework;
 using ReflectionFramework;
-
+using ReflectionFramework.Extensions;
 
 
 namespace ReflectionHelperTests {
