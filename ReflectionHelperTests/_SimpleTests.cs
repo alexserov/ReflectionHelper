@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
 
@@ -39,13 +40,17 @@ namespace ReflectionHelperTests {
         void PrivateVoidMethod();
         string PublicStringProperty { get; set; }
     }
+
+    [FallbackMode(ReflectionHelperFallbackMode.ThrowNotImplementedException)]
+    public interface IClass1_1 : IClass1 {}
+
     [TestFixture]
     public class Tests {
        
         [Test]
         public void PublicVoidMethodTest() {
             Class1 cl = new Class1();
-            var wrapped = cl.Wrap<IClass1>();
+            var wrapped = cl.Wrap<IClass1_1>();
             wrapped.PublicVoidMethod();
             Assert.AreEqual("PublicVoidMethod", cl.LastMethod);
         }
@@ -63,8 +68,8 @@ namespace ReflectionHelperTests {
         [Test]
         public void PublicStringPropertyTest() {
             Class1 cl = new Class1();
-            var wrapped = cl.DefineWrapper<IClass1>()
-                .Create();
+            var wrapped = cl.DefineWrapper<IClass1>().DefaultFallbackMode(ReflectionHelperFallbackMode.ThrowNotImplementedException)
+                            .Create();
             wrapped.PublicStringProperty = "hello";
             Assert.AreEqual("set_PublicStringProperty", cl.LastMethod);
             Assert.AreEqual("hello", wrapped.PublicStringProperty);

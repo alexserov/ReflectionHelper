@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework.Internal {
@@ -35,6 +36,10 @@ namespace ReflectionFramework.Internal {
         protected void FallbackImpl(Delegate fallbackAction) {
             root.WriteSetting(info, x => x.FallbackAction = fallbackAction);
         }
+
+        protected void FallbackModeImpl(ReflectionHelperFallbackMode value) {
+            root.WriteSetting(info, x => x.FallbackMode = value);
+        }
     }
 
     public class InterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> : BaseInterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> where TInterfaceWrapper : ReflectionHelperInterfaceWrapperGenerator<TWrapper> {
@@ -47,6 +52,7 @@ namespace ReflectionFramework.Internal {
         public InterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember(string name) { InterfaceImpl(name); return this; }
         public InterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember<T>() { InterfaceImpl<T>(); return this; }
         public InterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember(Type interfaceType) { InterfaceImpl(interfaceType); return this; }
+        public InterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> FallbackMode(ReflectionHelperFallbackMode mode) { FallbackModeImpl(mode); return this; }
     }
 
     public class InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> : BaseInterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> where TInterfaceWrapper : ReflectionHelperInterfaceWrapperGenerator<TWrapper> {
@@ -60,6 +66,7 @@ namespace ReflectionFramework.Internal {
         public InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember(string name) { InterfaceImpl(name); return this; }
         public InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember<T>() { InterfaceImpl<T>(); return this; }
         public InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> InterfaceMember(Type interfaceType) { InterfaceImpl(interfaceType); return this; }
+        public InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> FallbackMode(ReflectionHelperFallbackMode mode) { FallbackModeImpl(mode); return this; }
 
         public InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> FieldAccessor() {
             root.WriteSetting(info, x => x.IsField = true);

@@ -22,13 +22,13 @@ namespace ReflectionHelperTests {
             var wrapper = new object().DefineWrapper<IObject>()
                 .DefineProperty(x => x.Property)
                 .GetterFallback(new Func<object, string>(x => "hello"))
-                .SetterFallback(new Action<object>(x => { }))
+                .SetterFallback(new Action<object, object>((i, x) => { }))
                 .EndMember()
                 .DefineMethod(x => x.Method())
                 .Fallback(new Action<object>(x => { }))
                 .EndMember()
                 .DefineMethod(x=>x.Method2(ref fake))
-                .Fallback(new Func<object, string, Tuple<string>>((x,a)=>new Tuple<string>("abc")))
+                .Fallback(new Func<object, object, Tuple<string>>((x, a) => new Tuple<string>("abc")))
                 .EndMember()                       
                 .Create();
             Assert.AreEqual("hello", wrapper.Property);

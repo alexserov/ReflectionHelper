@@ -8,7 +8,7 @@ namespace ReflectionHelperTests {
     internal class StaticFulentAPITestObject {
         static string stringField;
         public static string PublicStringProperty { get; set; }
-        public static string PrivateStringProperty { get; set; }
+        private static string PrivateStringProperty { get; set; }
 
         public static string PublicMethod(string value) {
             return value;

@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Data.SqlTypes;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Cache;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Security;
+using System.Text;
 using ReflectionFramework.Attributes;
 
 namespace ReflectionFramework.Internal {
@@ -51,7 +53,8 @@ namespace ReflectionFramework.Internal {
             return null;            
         }
 
-        protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;
+        protected internal BindingFlags defaultFlags = BindingFlags.Instance | BindingFlags.Public;        
+        protected internal  ReflectionHelperFallbackMode defaultFallbackMode = ReflectionHelperFallbackMode.Default;
         protected internal Type tWrapper;
         protected internal BaseReflectionHelperInterfaceWrapperGenerator(ModuleBuilder builder, object element, bool isStatic, Type tWrapper) {
             this.tWrapper = tWrapper;
@@ -239,9 +242,13 @@ namespace ReflectionFramework.Internal {
             var useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(unwrappedParameterTypes, ref unwrappedReturnType,
                 isStatic ? null : typeof(object), out useTuple);
+            var delegateInvoke = delegateType.GetMethod("Invoke");
             var fallbackMode = sourceFieldInfo == null;
             if (fallbackMode) {
-                PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
+                if(!PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method, delegateInvoke, isStatic, propertyInfo)) {
+                    ilGenerator.Emit(OpCodes.Ret);
+                    return;
+                }          
             } else {                
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 Ldfld(ilGenerator, fieldInfo);
@@ -269,7 +276,7 @@ namespace ReflectionFramework.Internal {
                     EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.UnwrapMethodInfo, null);
                 }
             }
-            EmitCall(ilGenerator,OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+            EmitCall(ilGenerator,OpCodes.Call, delegateInvoke, null);
             if (wrapReturnType) {
                 TypeOf(ilGenerator, returnType);
                 EmitCall(ilGenerator,OpCodes.Call, ReflectionHelperInterfaceWrapper.WrapMethodInfo, null);
@@ -343,12 +350,16 @@ namespace ReflectionFramework.Internal {
             var useTuple = false;
             var delegateType = ReflectionHelper.MakeGenericDelegate(updatedParameterTypes, ref unwrappedReturnTupe,
                 isStatic ? null : typeof(object), out useTuple);
+            var delegateInvoke = delegateType.GetMethod("Invoke");
             LocalBuilder tupleLocalBuilder = null;
             if (useTuple)
                 tupleLocalBuilder = ilGenerator.DeclareLocal(unwrappedReturnTupe);
             var fallbackMode = sourceMethodInfo == null;
             if (fallbackMode) {
-                PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method);
+                if (!PrepareFallback(typeBuilder, wrapperMethodInfo, ctorInfos, ctorArgs, setting, ilGenerator, method, delegateInvoke, isStatic, baseMemberInfo)) {
+                    ilGenerator.Emit(OpCodes.Ret);
+                    return;
+                }                    
             } else {
                 ilGenerator.Emit(OpCodes.Ldarg_0);
                 Ldfld(ilGenerator, fieldInfo);
@@ -385,7 +396,7 @@ namespace ReflectionFramework.Internal {
                         LSTind(ilGenerator, paramType.GetElementType(), false);
                 }                
             }
-            EmitCall(ilGenerator,OpCodes.Call, delegateType.GetMethod("Invoke"), null);
+            EmitCall(ilGenerator,OpCodes.Call, delegateInvoke, null);
 
             if (useTuple) {
                 SyncTupleItems(updatedParameterTypes.Select((x, i) => new Tuple<int, Type, Type>(i, x, parameterTypes[i])).Where(x => x.Item2.IsByRef),
@@ -400,15 +411,50 @@ namespace ReflectionFramework.Internal {
             typeBuilder.DefineMethodOverride(methodBuilder, wrapperMethodInfo);
         }        
 
-        static void PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo,
-            List<FieldInfo> ctorInfos, List<object> ctorArgs,
-            BaseReflectionHelperInterfaceWrapperSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind) {
+        bool PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, List<FieldInfo> ctorInfos, List<object> ctorArgs, BaseReflectionHelperInterfaceWrapperSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind, MethodInfo delegateInvoke, bool isStatic, MemberInfo baseInfo) {
+            var fallbackMode = setting.GetFallbackMode(wrapperMethodInfo, baseInfo, tWrapper);
+            if (fallbackMode == ReflectionHelperFallbackMode.Default)
+                fallbackMode = defaultFallbackMode;
+            if(fallbackMode == ReflectionHelperFallbackMode.AbortWrapping)
+                throw new MissingMemberException(String.Format("\r\nCannot bind the {0}.{1} with the source member\r\n", wrapperMethodInfo.DeclaringType, wrapperMethodInfo.Name));            
             var fallback = setting.GetFallback(infoKind);
+            if (fallback == null) {
+                if (fallbackMode != ReflectionHelperFallbackMode.ThrowNotImplementedException)
+                    throw new ArgumentException(String.Format("\r\nCannot bind the {0}.{1} with the source member.\r\nPlease check spelling or define the fallback method with the following signature: \r\n\t{2}.\r\n", wrapperMethodInfo.DeclaringType, wrapperMethodInfo.Name, delegateInvoke.ToString()));
+                if (!this.isStatic)
+                    ilGenerator.Emit(OpCodes.Pop);
+                ilGenerator.ThrowException(typeof(NotImplementedException));
+                return false;
+            }
+            var fallbackType = fallback.GetType();
+            if (fallbackMode != ReflectionHelperFallbackMode.FallbackWithoutValidation) {                
+                var fallbackInvoke = fallbackType.GetMethod("Invoke");
+                var currentParameters = fallbackInvoke.GetParameters();
+                var expectedParameters = delegateInvoke.GetParameters();
+                StringBuilder exceptionBuilder = new StringBuilder();
+                exceptionBuilder.AppendFormat("\r\nFallback method for the {0}.{1} has incorrect signature.\r\nExpected: {2};\r\nBut was: {3}.", wrapperMethodInfo.DeclaringType, wrapperMethodInfo.Name, delegateInvoke.ToString(), fallbackInvoke.ToString());
+                if (currentParameters.Length != expectedParameters.Length || !fallbackInvoke.ReturnType.IsAssignableFrom(delegateInvoke.ReturnType)) {
+                    throw new ArgumentException(exceptionBuilder.ToString() + "\r\n");
+                }
+                bool shouldThrow = false;
+                for (int i = 0; i < currentParameters.Length; i++) {
+                    var current = currentParameters[i];
+                    var expected = expectedParameters[i];
+                    if (current.ParameterType.IsAssignableFrom(expected.ParameterType))
+                        continue;
+                    exceptionBuilder.AppendFormat("\r\n\tParameter at {0}:\r\n\t\tShould be assignable with: {1}\r\n\t\tBut was: {2}", i, expected.ParameterType, current.ParameterType);
+                    shouldThrow = true;
+                }
+                if (shouldThrow) {
+                    throw new ArgumentException(exceptionBuilder.ToString() + "\r\n");
+                }
+            }
             var fallbackField = typeBuilder.DefineField("field" + wrapperMethodInfo.Name + "fallback",
-                fallback.GetType(), FieldAttributes.Private);
+                fallbackType, FieldAttributes.Private);
             ctorInfos.Add(fallbackField);
             ctorArgs.Add(fallback);
             Ldfld(ilGenerator, fallbackField);
+            return true;
         }
 
 
@@ -563,6 +609,10 @@ namespace ReflectionFramework.Internal {
             return this;
         }
 
+        public ReflectionHelperInterfaceWrapperGenerator<TWrapper> DefaultFallbackMode(ReflectionHelperFallbackMode mode) {
+            defaultFallbackMode = mode;
+            return this;
+        }
         protected InterfaceWrapperPropertyMemberInfoInstance<TWrapper, TInterfaceWrapper> DefineProperty<TInterfaceWrapper>(
             Expression<Func<TWrapper, object>> expression) where TInterfaceWrapper : ReflectionHelperInterfaceWrapperGenerator<TWrapper> {
             if (expression.Body is MemberExpression)

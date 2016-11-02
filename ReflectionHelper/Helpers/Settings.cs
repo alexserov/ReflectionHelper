@@ -48,11 +48,18 @@ namespace ReflectionFramework {
             return false;
         }
 
-        internal virtual Delegate GetFallback(MemberInfoKind kind) {
-            return new Action(() => { });
+        internal virtual Delegate GetFallback(MemberInfoKind kind) { return null; }
+
+        internal virtual ReflectionHelperFallbackMode GetFallbackMode(MethodInfo wrapperMethodInfo, MemberInfo baseInfo, Type tWrapper) {
+            var attribute = GetAttribute<FallbackModeAttribute>(wrapperMethodInfo) ??
+                            GetAttribute<FallbackModeAttribute>(baseInfo) ??
+                            tWrapper.GetCustomAttributes(typeof(FallbackModeAttribute), true).OfType<FallbackModeAttribute>().FirstOrDefault();
+            if (attribute == null)
+                return ReflectionHelperFallbackMode.Default;
+            return attribute.Mode;
         }
 
-        public abstract int ComputeKey();
+        public abstract int ComputeKey();        
     }
 
     internal class ReflectionHelperInterfaceWrapperSetting : BaseReflectionHelperInterfaceWrapperSetting {
@@ -66,6 +73,7 @@ namespace ReflectionFramework {
         public Delegate GetterFallbackAction { get; set; }
         public Delegate SetterFallbackAction { get; set; }
         public string InterfaceName { get; set; }
+        public ReflectionHelperFallbackMode FallbackMode { get; set; }
 
         internal override BindingFlags GetBindingFlags(MemberInfo primaryMethodInfo, MemberInfo secondaryMemberInfo) {
             return BindingFlags ?? base.GetBindingFlags(primaryMethodInfo, secondaryMemberInfo);
@@ -100,6 +108,7 @@ namespace ReflectionFramework {
             }
             return result ?? base.GetFallback(infoKind);
         }
+        internal override ReflectionHelperFallbackMode GetFallbackMode(MethodInfo wrapperMethodInfo, MemberInfo baseInfo, Type tWrapper) { return FallbackMode == ReflectionHelperFallbackMode.Default ? base.GetFallbackMode(wrapperMethodInfo, baseInfo, tWrapper) : FallbackMode; }
 
         public override int ComputeKey() {
             unchecked {
@@ -110,6 +119,7 @@ namespace ReflectionFramework {
                 hashCode = (hashCode * 397) ^ (GetterFallbackAction != null ? GetterFallbackAction.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SetterFallbackAction != null ? SetterFallbackAction.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (InterfaceName != null ? InterfaceName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FallbackMode != null ? FallbackMode.GetHashCode() : 0);
                 return hashCode;
             }
         }

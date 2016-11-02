@@ -13,7 +13,7 @@ namespace ReflectionHelperTests {
     internal class FulentAPITestObject {
         string stringField;
         public string PublicStringProperty { get; set; }
-        public string PrivateStringProperty { get; set; }
+        private string PrivateStringProperty { get; set; }
 
         public string PublicMethod(string value) {
             return value;
