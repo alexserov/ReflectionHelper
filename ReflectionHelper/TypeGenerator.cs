@@ -26,21 +26,63 @@ namespace ReflectionFramework.Internal {
         protected object Element { get { return element; } }
         protected Type ElementType { get { return elementType; } }
         protected struct InstanceCacheKey {
-            private Type elementType;
-            private Type type;
-            private int v;
+            sealed class InstanceCacheKeyEqualityComparer : IEqualityComparer<InstanceCacheKey> {
+                public bool Equals(InstanceCacheKey x, InstanceCacheKey y) {
+                    return x.elementType.Equals(y.elementType) && x.type.Equals(y.type) && x.v == y.v && x.isStatic == y.isStatic;
+                }
 
-            public InstanceCacheKey(Type elementType, Type type, int v) {
+                public int GetHashCode(InstanceCacheKey obj) {
+                    unchecked {
+                        var hashCode = obj.elementType.GetHashCode();
+                        hashCode = (hashCode * 397) ^ obj.type.GetHashCode();
+                        hashCode = (hashCode * 397) ^ obj.v;
+                        hashCode = (hashCode * 397) ^ obj.isStatic.GetHashCode();
+                        return hashCode;
+                    }
+                }
+            }
+
+            public static IEqualityComparer<InstanceCacheKey> InstanceCacheKeyComparer { get; } = new InstanceCacheKeyEqualityComparer();
+
+            public bool Equals(InstanceCacheKey other) {
+                return elementType.Equals(other.elementType) && type.Equals(other.type) && v == other.v && isStatic == other.isStatic;
+            }
+
+            public override bool Equals(object obj) {
+                if (ReferenceEquals(null, obj)) return false;
+                return obj is InstanceCacheKey && Equals((InstanceCacheKey) obj);
+            }
+
+            public override int GetHashCode() {
+                unchecked {
+                    var hashCode = elementType.GetHashCode();
+                    hashCode = (hashCode * 397) ^ type.GetHashCode();
+                    hashCode = (hashCode * 397) ^ v;
+                    hashCode = (hashCode * 397) ^ isStatic.GetHashCode();
+                    return hashCode;
+                }
+            }
+
+            public static bool operator ==(InstanceCacheKey left, InstanceCacheKey right) { return left.Equals(right); }
+            public static bool operator !=(InstanceCacheKey left, InstanceCacheKey right) { return !left.Equals(right); }
+
+            Type elementType;
+            Type type;
+            int v;
+            bool isStatic;
+
+            public InstanceCacheKey(Type elementType, Type type, int v, bool isStatic) {
                 this.elementType = elementType;
                 this.type = type;
                 this.v = v;
+                this.isStatic = isStatic;
             }
         }
 
         protected static readonly Dictionary<InstanceCacheKey, Func<object, object>> CachedConstructors;        
 
         static BaseReflectionHelperInterfaceWrapperGenerator() {
-            CachedConstructors = new Dictionary<InstanceCacheKey, Func<object, object>>();            
+            CachedConstructors = new Dictionary<InstanceCacheKey, Func<object, object>>(InstanceCacheKey.InstanceCacheKeyComparer);
             SubscribeTypeResolve();
         }
 
@@ -179,7 +221,7 @@ namespace ReflectionFramework.Internal {
         }
 
         protected object CachedCreateImpl() {            
-            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode(), isStatic);
             Func<object, object> result;
             if (CachedConstructors.TryGetValue(icc, out result)) {
                 return result(Element);
@@ -188,7 +230,7 @@ namespace ReflectionFramework.Internal {
         }        
 
         protected object CachedCreateInstance(Type result, List<object> ctorArgs) {            
-            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode());
+            InstanceCacheKey icc = new InstanceCacheKey(ElementType, tWrapper, GetSettingCode(), isStatic);
             CachedConstructors[icc] = CreateConstructor(result, ctorArgs);
             return CreateInstance(result, ctorArgs);
         }
@@ -317,7 +359,7 @@ namespace ReflectionFramework.Internal {
             var sourceMethodIsInterface = GetIsInterface(setting, wrapperMethodInfo.Name, baseMemberInfo ?? wrapperMethodInfo);
             var sourceMethodName = GetTargetName(wrapperMethodInfo.Name, setting, method, baseMemberInfo ?? wrapperMethodInfo);
             var sourceMethodBindingFalgs = setting.GetBindingFlags(baseMemberInfo, wrapperMethodInfo) | (isStatic ? BindingFlags.Static : 0);
-            var sourceMethodInfo = (sourceMethodIsInterface ? sourceType.GetInterfaces() : FlatternType(sourceType, false)).Select(x => x.GetMethod(sourceMethodName, sourceMethodBindingFalgs)).FirstOrDefault(x => x != null);
+            var sourceMethodInfo = (sourceMethodIsInterface ? sourceType.GetInterfaces() : FlatternType(sourceType, false)).Select(x => GetMethod(x, sourceMethodName, sourceMethodBindingFalgs, wrapperMethodInfo)).FirstOrDefault(x => x != null);
             FieldBuilder fieldInfo = null;
             if (sourceMethodInfo != null) {
                 fieldInfo = typeBuilder.DefineField("field" + wrapperMethodInfo.Name, sourceMethodInfo.GetType(),
@@ -409,8 +451,81 @@ namespace ReflectionFramework.Internal {
             ilGenerator.Emit(OpCodes.Ret);
 
             typeBuilder.DefineMethodOverride(methodBuilder, wrapperMethodInfo);
-        }        
+        }
 
+        MethodInfo GetMethod(Type type, string sourceMethodName, BindingFlags bindingFlags, MethodInfo targetMethodInfo) { return GetMethods(type, sourceMethodName, bindingFlags, targetMethodInfo).OrderBy(x => x.Item1).FirstOrDefault()?.Item2; }
+
+        IEnumerable<Tuple<int, MethodInfo>> GetMethods(Type type, string sourceMethodName, BindingFlags bindingFlags, MethodInfo targetMethodInfo) {
+            var methods = type.GetMethods(bindingFlags).Where(x => x.Name == sourceMethodName).ToArray();
+            if (methods.Length == 0)
+                yield break;
+            if (methods.Length == 1) {
+                yield return new Tuple<int, MethodInfo>(0, methods[0]);
+                yield break;
+            }            
+            var args = targetMethodInfo.GetParameters();
+            foreach (var methodInfo in methods) {
+                int miLength = 0;
+                var currentParams = methodInfo.GetParameters();
+                if (currentParams.Length != args.Length)
+                    continue;
+                for (int i = 0; i < args.Length; i++) {
+                    var currentTargetArg = args[i].ParameterType;
+                    var currentSourceArg = currentParams[i].ParameterType;
+
+                    if (currentTargetArg == currentSourceArg) {
+                        continue;
+                    } else if (currentTargetArg.IsAssignableFrom(currentSourceArg)) {
+                        bool checkInterface = currentTargetArg.IsInterface;
+                        var fInfType = currentSourceArg;
+                        do {
+                            if (checkInterface) {
+                                var assignableInterface = fInfType.GetInterfaces().FirstOrDefault(x => currentTargetArg.IsAssignableFrom(x));
+                                if (assignableInterface != null) {
+                                    int delta = 1;
+                                    while (assignableInterface != currentTargetArg && assignableInterface != null) {
+                                        delta++;
+                                        assignableInterface = assignableInterface.BaseType;
+                                    }
+                                    miLength += delta;
+                                    break;
+                                }
+                            }
+                            miLength++;
+                            fInfType = fInfType.BaseType;
+                        } while (fInfType!=currentTargetArg);
+                        continue;
+                    }
+
+                    if (ShouldWrapType(currentTargetArg)) {
+                        var currentSourceArgTypeName = currentSourceArg.FullName;
+                        foreach (var attribute in currentTargetArg.GetCustomAttributes(typeof(AssignableFromAttribute), true).OfType<AssignableFromAttribute>().Where(x => x != null && !x.Inverse)) {
+                            if (currentSourceArgTypeName == attribute.GetTypeName()) {
+                                goto AssignableFromSuccess;
+                            }
+                        }
+                        goto MethodInfoFailure;
+
+                        AssignableFromSuccess:
+                        continue;                        
+                    }
+                    goto MethodInfoFailure;
+                }
+                goto MethodInfoSuccess;
+
+                MethodInfoFailure:
+                continue;
+
+                MethodInfoSuccess:
+                yield return new Tuple<int, MethodInfo>(miLength, methodInfo);
+            }
+        }
+        public static bool IsNullableOf(Type nullable, Type argument, bool extended) {
+            if (!nullable.IsValueType || argument == null)
+                return false;            
+            var underlyingType = Nullable.GetUnderlyingType(nullable);
+            return extended ? argument.IsAssignableFrom(underlyingType) : underlyingType == argument;            
+        }
         bool PrepareFallback(TypeBuilder typeBuilder, MethodInfo wrapperMethodInfo, List<FieldInfo> ctorInfos, List<object> ctorArgs, BaseReflectionHelperInterfaceWrapperSetting setting, ILGenerator ilGenerator, MemberInfoKind infoKind, MethodInfo delegateInvoke, bool isStatic, MemberInfo baseInfo) {
             var fallbackMode = setting.GetFallbackMode(wrapperMethodInfo, baseInfo, tWrapper);
             if (fallbackMode == ReflectionHelperFallbackMode.Default)

@@ -44,12 +44,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="_AmbiguousMatchTests.cs" />
     <Compile Include="_APITests.cs" />
     <Compile Include="_AssignableFromAttributeTests.cs" />
     <Compile Include="_AttributesTests.cs" />
     <Compile Include="_InheritedInterfacesTests.cs" />
     <Compile Include="_InterfaceTests.cs" />
     <Compile Include="_InternalInterfacesTests.cs" />
+    <Compile Include="_StaticAndPublicMergedImplementationTests.cs" />
     <Compile Include="_StaticTests.cs" />
     <Compile Include="_FallbackTests.cs" />
     <Compile Include="_FluentAPITests.cs" />
