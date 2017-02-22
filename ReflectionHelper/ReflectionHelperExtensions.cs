@@ -29,6 +29,8 @@ namespace ReflectionFramework.Extensions {
         }
 
         public static ReflectionHelperInstanceInterfaceWrapperGenerator<TWrapper> DefineWrapper<TWrapper>(this object element) {
+            if (element == null)
+                return null;            
             return new ReflectionHelperInstanceInterfaceWrapperGenerator<TWrapper>(moduleBuilder, element);
         }
 
@@ -37,6 +39,8 @@ namespace ReflectionFramework.Extensions {
         }
 
         public static TWrapper Wrap<TWrapper>(this object element) {
+            if (element == null)
+                return default(TWrapper);
             return element.DefineWrapper<TWrapper>().Create();
         }
 
@@ -48,6 +52,8 @@ namespace ReflectionFramework.Extensions {
             return typeof(TType).Wrap<TWrapper>();
         }        
         internal static object Wrap(object element, Type wrapperType) {
+            if (element == null)
+                return null;
             return new BaseReflectionHelperInterfaceWrapperGenerator(moduleBuilder, element, false, wrapperType).CreateInternal();
         }
 #if DEBUGTEST
