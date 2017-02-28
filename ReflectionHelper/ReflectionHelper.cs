@@ -35,15 +35,18 @@ namespace ReflectionFramework {
         static object CreateMethodHandlerImpl(object instance, string methodName, BindingFlags bindingFlags,
             Type instanceType, Type delegateType, int? parametersCount, Type[] typeParameters, bool callVirtIfNeeded) {
             MethodInfo mi = null;
+            bool isInstance = (bindingFlags & BindingFlags.Instance) == BindingFlags.Instance;
+            bool isStatic = (bindingFlags & BindingFlags.Instance) == BindingFlags.Static;
+            bool preferInstance = isInstance;
+            if (isStatic && isInstance || !(isInstance || isStatic))
+                preferInstance = instance != null;
             if (instance != null)
-                mi = GetMethod(instance.GetType(), methodName, bindingFlags, parametersCount, typeParameters);
-            mi = mi ?? GetMethod(instanceType, methodName, bindingFlags, parametersCount, typeParameters);
+                mi = GetMethod(instance.GetType(), methodName, bindingFlags, parametersCount, typeParameters, delegateType, preferInstance);
+            mi = mi ?? GetMethod(instanceType, methodName, bindingFlags, parametersCount, typeParameters, delegateType, preferInstance);
             return CreateMethodHandlerImpl(mi, instanceType, delegateType, callVirtIfNeeded);
         }
 
-        static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags,
-            int? parametersCount = null,
-            Type[] typeParameters = null) {
+        static MethodInfo GetMethod(Type type, string methodName, BindingFlags bindingFlags, int? parametersCount, Type[] typeParameters, Type delegateType, bool preferInstance) {
             if (parametersCount != null) {
                 return
                     type.GetMethods(bindingFlags)
@@ -60,8 +63,29 @@ namespace ReflectionFramework {
                     }
                     return true;
                 });
-            }
-            return type.GetMethod(methodName, bindingFlags);
+            }            
+            var methods = type.GetMethods(bindingFlags).Where(x => x.Name == methodName).ToArray();
+            if (methods.Length == 1)
+                return methods[0];
+            if (methods.Length == 0)
+                return null;
+            var delegateInvoke = delegateType.GetMethod("Invoke");
+            var delegateParameters = delegateInvoke.GetParameters();
+            var delegateReturnType = delegateInvoke.ReturnType;
+            return methods.Where(x => {
+                if (!delegateReturnType.IsAssignableFrom(x.ReturnType))
+                    return false;
+                var methodParameters = x.GetParameters();
+                if (delegateParameters.Length != methodParameters.Length + (preferInstance ? 1 : 0))
+                    return false;
+                int dpIndex = preferInstance ? 1 : 0;
+                int mpIndex = 0;
+                for (; dpIndex < delegateParameters.Length; dpIndex++, mpIndex++) {
+                    if (!delegateParameters[dpIndex].ParameterType.IsAssignableFrom(methodParameters[mpIndex].ParameterType))
+                        return false;
+                }
+                return true;
+            }).FirstOrDefault();
         }
 
         internal static bool ShouldCastClass(Type sourceType, Type targetType) {
