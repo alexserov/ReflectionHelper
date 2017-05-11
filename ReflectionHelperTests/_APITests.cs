@@ -7,7 +7,19 @@ using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
+#if RHELPER
+using ReflectionFramework;
+using ReflectionFramework.Attributes;
+using ReflectionFramework.Extensions;
+
 namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
+
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
 {
     [TestFixture]
     public class _APITests
@@ -15,7 +27,7 @@ namespace ReflectionHelperTests
         [Test]
         [Explicit]
         public void Test() {
-            var asm = typeof(ReflectionFramework.ReflectionHelper).Assembly;
+            var asm = typeof(ReflectionHelper).Assembly;
             StringBuilder builder = new StringBuilder();
             foreach (var exportedType in asm.GetExportedTypes()) {
                 if(exportedType.Namespace.Contains("Internal"))

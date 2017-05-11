@@ -1,9 +1,14 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+#if RHELPER
 using ReflectionFramework;
 using ReflectionFramework.Extensions;
 using ReflectionFramework.Internal;
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions;
+#endif
 
 
 // General Information about an assembly is controlled through the following 

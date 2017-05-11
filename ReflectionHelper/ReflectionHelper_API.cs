@@ -2,7 +2,11 @@
 using System.Reflection;
 using System.Reflection.Emit;
 
+#if RHELPER
 namespace ReflectionFramework {
+#else
+namespace DevExpress.Xpf.Core.Internal {
+#endif
     public partial class ReflectionHelper {
         public static Action<object, Delegate, object, Delegate> CreatePushValueMethod(MethodInfo setValueDelegate,
             MethodInfo getValueDelegate) {

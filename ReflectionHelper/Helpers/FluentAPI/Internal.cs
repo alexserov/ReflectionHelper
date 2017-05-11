@@ -3,10 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+
+#if RHELPER
 using ReflectionFramework.Attributes;
 using ReflectionFramework.Internal;
-
 namespace ReflectionFramework.Internal {
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Internal {
+#endif
     public class BaseInterfaceWrapperMemberInfoInstance<TWrapper, TInterfaceWrapper> where TInterfaceWrapper : ReflectionHelperInterfaceWrapperGenerator<TWrapper> {
         protected readonly MemberInfo info;
         protected BindingFlags? flags;

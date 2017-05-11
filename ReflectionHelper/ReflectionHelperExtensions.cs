@@ -2,9 +2,15 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
+#if RHELPER
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework.Extensions {
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Internal;
+
+namespace DevExpress.Xpf.Core.ReflectionExtensions {
+#endif
     public static class ReflectionHelperExtensions {
         const string typesAssemblyName = "ReflectionHelperTypes";
         const string typesModuleName = "ReflectionHelperModule";

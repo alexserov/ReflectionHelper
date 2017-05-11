@@ -4,11 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+#if RHELPER
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
+namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
 
-namespace ReflectionHelperTests {
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
+    {
     
     public class SomeClass1 {
         public SomeClass1() {
@@ -52,14 +61,14 @@ namespace ReflectionHelperTests {
             return Property.Prop1;
         }
     }
-    [ReflectionFramework.Attributes.Wrapper]
+    [Wrapper]
     public interface ISomeClass1 {
         string Prop1 { get; set; }
     }
 
-    [ReflectionFramework.Attributes.Wrapper]
+    [Wrapper]
     public interface ISomeClass2 {
-        [ReflectionFramework.Attributes.FieldAccessor]
+        [FieldAccessor]
         ISomeClass1 field { get; set; }
 
         ISomeClass1 Property { get; }

@@ -4,9 +4,16 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+
+#if RHELPER
 using ReflectionFramework.Extensions;
 
 namespace ReflectionFramework.Internal {
+#else
+using DevExpress.Xpf.Core.Internal;
+
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Internal {
+#endif
     public interface IReflectionHelperInterfaceWrapper {
         object Source { get; }
     }

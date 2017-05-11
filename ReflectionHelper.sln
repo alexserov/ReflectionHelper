@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.26403.7
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReflectionHelper", "ReflectionHelper\ReflectionHelper.csproj", "{B503D08F-5677-49C1-A5BC-3A97976F9666}"
 EndProject
@@ -9,14 +9,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReflectionHelperTests", "Re
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Core|Any CPU = Core|Any CPU
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Core|Any CPU.ActiveCfg = Core|Any CPU
+		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Core|Any CPU.Build.0 = Core|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B503D08F-5677-49C1-A5BC-3A97976F9666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}.Core|Any CPU.ActiveCfg = Core|Any CPU
+		{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}.Core|Any CPU.Build.0 = Core|Any CPU
 		{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA19CCFC-4E54-4994-A9D8-C1BED29A3960}.Release|Any CPU.ActiveCfg = Release|Any CPU

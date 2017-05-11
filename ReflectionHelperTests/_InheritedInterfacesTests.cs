@@ -5,11 +5,21 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+
+#if RHELPER
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
+namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
 
-namespace ReflectionHelperTests {
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
+    {
     public interface IParentInterface : IParentInterface2 {
         string Prop1 { get; }
         string Method1();

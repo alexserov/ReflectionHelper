@@ -4,11 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+
+#if RHELPER
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
+namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
 
-namespace ReflectionHelperTests {
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
+{
     public class AFA_Class1 {
         public string Prop1 { get; set; }
     }
@@ -29,10 +39,10 @@ namespace ReflectionHelperTests {
 
     public interface IAFA_Interface2 {}
 
-    [ReflectionFramework.Attributes.AssignableFrom(typeof(AFA_Class2))]
-    [ReflectionFramework.Attributes.AssignableFrom(typeof(IAFA_Interface))]
-    [ReflectionFramework.Attributes.AssignableFrom(typeof(Class3), Inverse = true)]
-    [ReflectionFramework.Attributes.AssignableFrom(typeof(IAFA_Interface2), Inverse = true)]
+    [AssignableFrom(typeof(AFA_Class2))]
+    [AssignableFrom(typeof(IAFA_Interface))]
+    [AssignableFrom(typeof(Class3), Inverse = true)]
+    [AssignableFrom(typeof(IAFA_Interface2), Inverse = true)]
     public interface IAFAWrapper {
         string Prop1 { get; set; }
     }

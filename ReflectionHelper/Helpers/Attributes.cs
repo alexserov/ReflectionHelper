@@ -1,7 +1,10 @@
 using System;
 using System.Reflection;
-
+#if RHELPER
 namespace ReflectionFramework.Attributes {
+#else
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Attributes {
+#endif
     [AttributeUsage(AttributeTargets.Property)]
     public class FieldAccessorAttribute : Attribute {}
 

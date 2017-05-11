@@ -1,10 +1,17 @@
 using System;
 using System.Linq;
 using System.Reflection;
+#if RHELPER
 using ReflectionFramework.Attributes;
 using ReflectionFramework.Internal;
 
 namespace ReflectionFramework {
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Internal;
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+
+namespace DevExpress.Xpf.Core.Internal {
+#endif
     internal abstract class BaseReflectionHelperInterfaceWrapperSetting {
         readonly BaseReflectionHelperInterfaceWrapperGenerator reflectionHelperInterfaceWrapperGenerator;
 

@@ -4,11 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+
+#if RHELPER
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
+namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
 
-namespace ReflectionHelperTests {
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
+    {
     internal class Class3 {
         public string StringString(ref string value) {
             value = "def";

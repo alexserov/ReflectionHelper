@@ -5,11 +5,21 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using NUnit.Framework;
+
+#if RHELPER
 using ReflectionFramework;
+using ReflectionFramework.Attributes;
 using ReflectionFramework.Extensions;
 
+namespace ReflectionHelperTests
+#else
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+using DevExpress.Xpf.Core.ReflectionExtensions;
+using DevExpress.Xpf.Core.Internal;
 
-namespace ReflectionHelperTests {
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Tests
+#endif
+    {
     class AttributesTestObject {
         public AttributesTestObject() {
             Prop1 = "Prop1";
@@ -27,18 +37,18 @@ namespace ReflectionHelperTests {
     }
 
     public interface IAttributesTestObject {
-        [ReflectionFramework.Attributes.Name("Prop1")]
+        [Name("Prop1")]
         string Prop100 { get; set; }
 
-        [ReflectionFramework.Attributes.Name("prop2")]
-        [ReflectionFramework.Attributes.FieldAccessor]
+        [Name("prop2")]
+        [FieldAccessor]
         string Prop12 { get; set; }
 
-        [ReflectionFramework.Attributes.Name("Method1")]
+        [Name("Method1")]
         string Method2();
 
-        [ReflectionFramework.Attributes.Name("Method2")]
-        [ReflectionFramework.Attributes.BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)]
+        [Name("Method2")]
+        [BindingFlags(BindingFlags.NonPublic | BindingFlags.Instance)]
         string Method3();
     }
     [TestFixture]

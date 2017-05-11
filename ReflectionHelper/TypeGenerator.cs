@@ -8,9 +8,16 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Security;
 using System.Text;
+#if RHELPER
 using ReflectionFramework.Attributes;
 
 namespace ReflectionFramework.Internal {
+#else
+using DevExpress.Xpf.Core.Internal;
+using DevExpress.Xpf.Core.ReflectionExtensions.Attributes;
+
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Internal {
+#endif
     internal enum MemberInfoKind {
         Method,
         PropertyGetter,

@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
+#if RHELPER
 namespace ReflectionFramework.Internal {
+#else
+namespace DevExpress.Xpf.Core.ReflectionExtensions.Internal {
+#endif
     class ReflectionHelperAssemblyKey {
         public static readonly byte[] strongKeyPair = new byte[] {
             0x07, 0x02, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x52, 0x53, 0x41, 0x32, 0x00, 0x04, 0x00, 0x00,
